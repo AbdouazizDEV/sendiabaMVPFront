@@ -23,7 +23,7 @@ import { CategoryProductCard } from "./components/CategoryProductCard";
 import { useCategoryFilters } from "./hooks/useCategoryFilters";
 
 export default function CategoryPage() {
-  const params = useParams();
+  const params = useParams<{ categoryId?: string }>();
   const rawId = params.categoryId ?? "";
 
   if (!isProductCategory(rawId)) {

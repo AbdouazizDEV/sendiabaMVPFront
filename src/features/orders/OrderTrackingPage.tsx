@@ -16,7 +16,7 @@ const steps = [
 ] as const;
 
 export default function OrderTrackingPage() {
-  const params = useParams();
+  const params = useParams<{ orderId?: string }>();
   const { session, isAuthenticated } = useAuth();
   const { orderService } = getServices();
 

@@ -15,7 +15,7 @@ import { ProductSimilarProductsSection } from "./components/ProductSimilarProduc
 import { useProductStickyBarVisibility } from "./hooks/useProductStickyBarVisibility";
 
 export default function ProductDetailPage() {
-  const params = useParams();
+  const params = useParams<{ id?: string }>();
   const [_, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
   const { addToCart } = useCart();

@@ -10,7 +10,7 @@ import { ArtisanDetailHero } from "./components/ArtisanDetailHero";
 import { ArtisanHeritageTimeline } from "./components/ArtisanHeritageTimeline";
 
 export default function ArtisanDetailPage() {
-  const params = useParams();
+  const params = useParams<{ id?: string }>();
   const { artisanService, productService } = getServices();
 
   const artisan = artisanService.getById(params.id ?? "");
