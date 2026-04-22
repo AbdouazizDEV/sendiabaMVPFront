@@ -5,6 +5,8 @@ import { ChevronDown, Menu, ShoppingBag, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useAuth, useCart } from "@/app/state";
+import logoMarron from "@/assets/logomaron.png";
+import logoBlanc from "@/assets/logoBanc.png";
 
 export function Navbar() {
   const [location] = useLocation();
@@ -54,8 +56,12 @@ export function Navbar() {
       }`}
     >
       <div className="container mx-auto px-6 md:px-12 flex items-center justify-between">
-        <Link href="/" className="text-2xl font-serif tracking-wide font-bold text-foreground z-50">
-          SENDIABA
+        <Link href="/" className="z-50 inline-flex items-center" aria-label="Sendiaba">
+          <img
+            src={isScrolled || !isHome ? logoMarron : logoBlanc}
+            alt="Sendiaba"
+            className="h-10 w-auto md:h-12"
+          />
         </Link>
 
         <div className="hidden md:flex items-center space-x-8">
