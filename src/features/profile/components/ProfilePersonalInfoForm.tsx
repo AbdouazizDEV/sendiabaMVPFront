@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,9 @@ import type { UserProfile } from "@/domain/types";
 
 type ProfilePersonalInfoFormProps = {
   profile: UserProfile;
-  onSave: (payload: Pick<UserProfile, "fullName" | "phone" | "country" | "city">) => void;
+  onSave: (
+    payload: Pick<UserProfile, "fullName" | "phone" | "country" | "city">,
+  ) => Promise<void>;
 };
 
 export function ProfilePersonalInfoForm({ profile, onSave }: ProfilePersonalInfoFormProps) {
@@ -16,10 +18,27 @@ export function ProfilePersonalInfoForm({ profile, onSave }: ProfilePersonalInfo
   const [phone, setPhone] = useState(profile.phone);
   const [country, setCountry] = useState(profile.country);
   const [city, setCity] = useState(profile.city);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    setFullName(profile.fullName);
+    setPhone(profile.phone);
+    setCountry(profile.country);
+    setCity(profile.city);
+  }, [profile]);
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    onSave({ fullName, phone, country, city });
+    setErrorMessage(null);
+    setIsSubmitting(true);
+    try {
+      await onSave({ fullName, phone, country, city });
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Impossible de mettre a jour le profil.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -51,7 +70,17 @@ export function ProfilePersonalInfoForm({ profile, onSave }: ProfilePersonalInfo
         </div>
       </div>
 
-      <Button type="submit" className="h-11 rounded-none uppercase tracking-[0.2em]">
+      {errorMessage && (
+        <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {errorMessage}
+        </p>
+      )}
+
+      <Button
+        type="submit"
+        disabled={isSubmitting}
+        className="h-11 rounded-none uppercase tracking-[0.2em]"
+      >
         Mettre a jour mon profil
       </Button>
     </motion.form>

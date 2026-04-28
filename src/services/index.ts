@@ -1,5 +1,8 @@
 export { ArtisanService } from "./artisan-service";
 export { AuthService } from "./auth-service";
+export { BackofficeArtisansService } from "./backoffice-artisans-service";
+export { BackofficeDashboardService } from "./backoffice-dashboard-service";
+export { BackofficeUsersService } from "./backoffice-users-service";
 export { CartService } from "./cart-service";
 export { CatalogService } from "./catalog-service";
 export { CertificationService } from "./certification-service";

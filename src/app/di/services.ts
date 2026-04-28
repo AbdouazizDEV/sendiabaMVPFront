@@ -2,6 +2,9 @@ import { StaticArtisanRepository, StaticProductRepository } from "@/infrastructu
 import {
   ArtisanService,
   AuthService,
+  BackofficeArtisansService,
+  BackofficeDashboardService,
+  BackofficeUsersService,
   CartService,
   CatalogService,
   CertificationService,
@@ -21,6 +24,9 @@ export type AppServices = {
   orderService: OrderService;
   checkoutService: CheckoutService;
   userProfileService: UserProfileService;
+  backofficeDashboardService: BackofficeDashboardService;
+  backofficeArtisansService: BackofficeArtisansService;
+  backofficeUsersService: BackofficeUsersService;
 };
 
 let instance: AppServices | null = null;
@@ -44,6 +50,9 @@ export function getServices(): AppServices {
       orderService,
       checkoutService: new CheckoutService(cartService, productService, orderService),
       userProfileService: new UserProfileService(),
+      backofficeDashboardService: new BackofficeDashboardService(),
+      backofficeArtisansService: new BackofficeArtisansService(),
+      backofficeUsersService: new BackofficeUsersService(),
     };
   }
   return instance;

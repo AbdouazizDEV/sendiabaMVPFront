@@ -7,6 +7,12 @@ export type AuthSession = {
   role: UserRole;
 };
 
+export type AuthTokenBundle = {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+};
+
 export type AuthCredentials = {
   email: string;
   password: string;
@@ -14,4 +20,5 @@ export type AuthCredentials = {
 
 export type RegisterPayload = AuthCredentials & {
   displayName: string;
+  phone: string;
 };
