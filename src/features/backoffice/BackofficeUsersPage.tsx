@@ -1,84 +1,16 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { AnimatePresence, motion } from "framer-motion";
 
+import { getServices } from "@/app/di/services";
 import { useAuth } from "@/app/state";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
-
-type StaticUser = {
-  id: string;
-  name: string;
-  email: string;
-  role: "Client" | "Artisan";
-  status: "Actif" | "Inactif" | "Verification";
-  city: string;
-  joinedAt: string;
-  totalOrders: number;
-};
-
-const STATIC_USERS: StaticUser[] = [
-  {
-    id: "USR-4012",
-    name: "Aminata Diallo",
-    email: "aminata@sendiaba.com",
-    role: "Client",
-    status: "Actif",
-    city: "Dakar",
-    joinedAt: "2026-02-03",
-    totalOrders: 8,
-  },
-  {
-    id: "USR-4013",
-    name: "Mamadou Sarr",
-    email: "mamadou@sendiaba.com",
-    role: "Client",
-    status: "Actif",
-    city: "Dakar",
-    joinedAt: "2026-02-03",
-    totalOrders: 8,
-  },
-  {
-    id: "USR-4014",
-    name: "Ndeye Fall",
-    email: "ndeye@sendiaba.com",
-    role: "Artisan",
-    status: "Verification",
-    city: "Dakar",
-    joinedAt: "2026-01-18",
-    totalOrders: 12,
-  },
-  {
-    id: "USR-4015",
-    name: "Fatou Mbaye",
-    email: "fatou@sendiaba.com",
-    role: "Client",
-    status: "Inactif",
-    city: "Thies",
-    joinedAt: "2025-12-10",
-    totalOrders: 5,
-  },
-  {
-    id: "USR-4016",
-    name: "Amadou Diop",
-    email: "amadou@sendiaba.com",
-    role: "Artisan",
-    status: "Actif",
-    city: "Dakar",
-    joinedAt: "2026-02-03",
-    totalOrders: 8,
-  },
-  {
-    id: "USR-4017",
-    name: "Khadija Gueye",
-    email: "khadija@sendiaba.com",
-    role: "Client",
-    status: "Actif",
-    city: "Dakar",
-    joinedAt: "2026-02-03",
-    totalOrders: 8,
-  },
-];
+import type {
+  BackofficeUser,
+  BackofficeUserRole,
+  BackofficeUserStatus,
+} from "@/services/backoffice-users-service";
 
 function statusClasses(status: string): string {
   if (status === "Actif") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-700";
@@ -88,26 +20,114 @@ function statusClasses(status: string): string {
 
 export default function BackofficeUsersPage() {
   const { session, isAuthenticated } = useAuth();
+  const { authService, backofficeUsersService } = getServices();
   const isAdmin = isAuthenticated && session?.role === "admin";
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRole, setSelectedRole] = useState<"Tous" | StaticUser["role"]>("Tous");
-  const [selectedStatus, setSelectedStatus] = useState<"Tous" | StaticUser["status"]>("Tous");
-  const [selectedUser, setSelectedUser] = useState<StaticUser | null>(null);
+  const [selectedRole, setSelectedRole] = useState<"Tous" | BackofficeUserRole>("Tous");
+  const [selectedStatus, setSelectedStatus] = useState<"Tous" | BackofficeUserStatus>("Tous");
+  const [selectedUser, setSelectedUser] = useState<BackofficeUser | null>(null);
+  const [users, setUsers] = useState<BackofficeUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isRoleUpdating, setIsRoleUpdating] = useState(false);
 
-  const filteredUsers = useMemo(() => {
-    return STATIC_USERS.filter((user) => {
-      const byQuery =
-        searchQuery.trim() === "" ||
-        user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.id.toLowerCase().includes(searchQuery.toLowerCase());
+  useEffect(() => {
+    if (!isAdmin) {
+      setIsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      const accessToken = authService.getAccessToken();
+      if (!accessToken) {
+        if (!cancelled) {
+          setErrorMessage("Session invalide. Veuillez vous reconnecter.");
+          setIsLoading(false);
+        }
+        return;
+      }
+      try {
+        if (!cancelled) {
+          setErrorMessage(null);
+          setIsLoading(true);
+        }
+        const data = await backofficeUsersService.list(accessToken, {
+          search: searchQuery,
+          role: selectedRole,
+          status: selectedStatus,
+          page: 1,
+          limit: 20,
+        });
+        if (!cancelled) {
+          setUsers(data.items);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "Impossible de charger la liste des utilisateurs.",
+          );
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    authService,
+    backofficeUsersService,
+    isAdmin,
+    searchQuery,
+    selectedRole,
+    selectedStatus,
+  ]);
 
-      const byRole = selectedRole === "Tous" || user.role === selectedRole;
-      const byStatus = selectedStatus === "Tous" || user.status === selectedStatus;
+  const openUserDetails = async (userId: string) => {
+    const accessToken = authService.getAccessToken();
+    if (!accessToken) return;
+    try {
+      const details = await backofficeUsersService.getById(accessToken, userId);
+      setSelectedUser(details);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Impossible de charger le detail utilisateur.",
+      );
+    }
+  };
 
-      return byQuery && byRole && byStatus;
-    });
-  }, [searchQuery, selectedRole, selectedStatus]);
+  const promoteToArtisan = async () => {
+    if (!selectedUser) return;
+    const accessToken = authService.getAccessToken();
+    if (!accessToken) return;
+    try {
+      setIsRoleUpdating(true);
+      const data = await backofficeUsersService.updateRole(
+        accessToken,
+        selectedUser.id,
+        "Artisan",
+      );
+      setUsers((current) =>
+        current.map((item) =>
+          item.id === data.id ? { ...item, role: data.role } : item,
+        ),
+      );
+      setSelectedUser((current) =>
+        current ? { ...current, role: data.role } : current,
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Impossible de changer le role.",
+      );
+    } finally {
+      setIsRoleUpdating(false);
+    }
+  };
 
   if (!isAdmin) {
     return (
@@ -117,6 +137,17 @@ export default function BackofficeUsersPage() {
           <Link href="/">
             <Button className="mt-6 rounded-none uppercase tracking-[0.2em]">Retour a l'accueil</Button>
           </Link>
+        </div>
+      </main>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <main className="min-h-screen bg-background px-6 pb-16 pt-32 md:px-12">
+        <Navbar />
+        <div className="mx-auto max-w-7xl">
+          <p className="text-muted-foreground">Chargement des utilisateurs...</p>
         </div>
       </main>
     );
@@ -135,8 +166,13 @@ export default function BackofficeUsersPage() {
           <p className="text-xs uppercase tracking-[0.3em] text-primary">Back-office / Utilisateurs</p>
           <h1 className="mt-4 font-serif text-5xl">Gestion des utilisateurs</h1>
           <p className="mt-3 text-muted-foreground">
-            Vue statique de l'interface administrateur pour organiser les comptes.
+            Interface administrateur connectee aux donnees backend.
           </p>
+          {errorMessage && (
+            <p className="mt-4 border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {errorMessage}
+            </p>
+          )}
         </header>
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -154,11 +190,12 @@ export default function BackofficeUsersPage() {
             <select
               value={selectedRole}
               onChange={(event) =>
-                setSelectedRole(event.target.value as "Tous" | StaticUser["role"])
+                setSelectedRole(event.target.value as "Tous" | BackofficeUserRole)
               }
               className="mt-2 h-11 w-full border border-border bg-background/80 px-3 text-sm outline-none transition-colors focus:border-primary/70"
             >
               <option value="Tous">Tous les roles</option>
+              <option value="Admin">Admin</option>
               <option value="Client">Client</option>
               <option value="Artisan">Artisan</option>
             </select>
@@ -168,7 +205,7 @@ export default function BackofficeUsersPage() {
             <select
               value={selectedStatus}
               onChange={(event) =>
-                setSelectedStatus(event.target.value as "Tous" | StaticUser["status"])
+                setSelectedStatus(event.target.value as "Tous" | BackofficeUserStatus)
               }
               className="mt-2 h-11 w-full border border-border bg-background/80 px-3 text-sm outline-none transition-colors focus:border-primary/70"
             >
@@ -189,7 +226,7 @@ export default function BackofficeUsersPage() {
             <span className="text-right">Actions</span>
           </div>
           <div>
-            {filteredUsers.map((user, index) => (
+            {users.map((user, index) => (
               <motion.article
                 key={user.id}
                 initial={{ opacity: 0, x: -8 }}
@@ -210,14 +247,14 @@ export default function BackofficeUsersPage() {
                   <Button
                     variant="outline"
                     className="h-8 rounded-none px-3 text-xs uppercase tracking-[0.18em]"
-                    onClick={() => setSelectedUser(user)}
+                    onClick={() => void openUserDetails(user.id)}
                   >
                     Voir
                   </Button>
                 </div>
               </motion.article>
             ))}
-            {filteredUsers.length === 0 && (
+            {users.length === 0 && (
               <div className="px-4 py-12 text-center text-sm text-muted-foreground">
                 Aucun utilisateur ne correspond a vos filtres.
               </div>
@@ -255,6 +292,17 @@ export default function BackofficeUsersPage() {
                   onClick={() => setSelectedUser(null)}
                 >
                   Fermer
+                </Button>
+              </div>
+
+              <div className="mt-4">
+                <Button
+                  type="button"
+                  disabled={isRoleUpdating || selectedUser.role === "Artisan"}
+                  className="rounded-none uppercase tracking-[0.2em]"
+                  onClick={() => void promoteToArtisan()}
+                >
+                  Promouvoir en artisan
                 </Button>
               </div>
 

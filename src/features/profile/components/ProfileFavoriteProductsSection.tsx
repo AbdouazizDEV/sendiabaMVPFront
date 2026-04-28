@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Trash2 } from "lucide-react";
@@ -15,8 +16,8 @@ import type { Product } from "@/domain/types";
 type ProfileFavoriteProductsSectionProps = {
   allProducts: readonly Product[];
   favoriteProducts: Product[];
-  onAddFavoriteProduct: (productId: string) => void;
-  onRemoveFavoriteProduct: (productId: string) => void;
+  onAddFavoriteProduct: (productId: string) => Promise<void>;
+  onRemoveFavoriteProduct: (productId: string) => Promise<void>;
 };
 
 export function ProfileFavoriteProductsSection({
@@ -25,6 +26,9 @@ export function ProfileFavoriteProductsSection({
   onAddFavoriteProduct,
   onRemoveFavoriteProduct,
 }: ProfileFavoriteProductsSectionProps) {
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+
   return (
     <motion.section
       initial={{ opacity: 0, y: 24 }}
@@ -34,8 +38,24 @@ export function ProfileFavoriteProductsSection({
     >
       <h2 className="font-serif text-3xl">Mes produits favoris</h2>
 
-      <Select onValueChange={onAddFavoriteProduct}>
-        <SelectTrigger className="h-11 rounded-none">
+      <Select
+        onValueChange={async (productId) => {
+          setErrorMessage(null);
+          setIsUpdating(true);
+          try {
+            await onAddFavoriteProduct(productId);
+          } catch (error) {
+            setErrorMessage(
+              error instanceof Error
+                ? error.message
+                : "Impossible d'ajouter ce produit aux favoris.",
+            );
+          } finally {
+            setIsUpdating(false);
+          }
+        }}
+      >
+        <SelectTrigger className="h-11 rounded-none" disabled={isUpdating}>
           <SelectValue placeholder="Ajouter un produit aux favoris" />
         </SelectTrigger>
         <SelectContent>
@@ -46,6 +66,12 @@ export function ProfileFavoriteProductsSection({
           ))}
         </SelectContent>
       </Select>
+
+      {errorMessage && (
+        <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {errorMessage}
+        </p>
+      )}
 
       {favoriteProducts.length === 0 ? (
         <p className="text-sm text-muted-foreground">Aucun produit favori pour le moment.</p>
@@ -67,7 +93,22 @@ export function ProfileFavoriteProductsSection({
                 <Button
                   variant="ghost"
                   className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive"
-                  onClick={() => onRemoveFavoriteProduct(product.id)}
+                  disabled={isUpdating}
+                  onClick={async () => {
+                    setErrorMessage(null);
+                    setIsUpdating(true);
+                    try {
+                      await onRemoveFavoriteProduct(product.id);
+                    } catch (error) {
+                      setErrorMessage(
+                        error instanceof Error
+                          ? error.message
+                          : "Impossible de retirer ce produit des favoris.",
+                      );
+                    } finally {
+                      setIsUpdating(false);
+                    }
+                  }}
                 >
                   <Trash2 size={15} />
                 </Button>

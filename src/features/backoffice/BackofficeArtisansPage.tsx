@@ -1,65 +1,14 @@
-import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Link } from "wouter";
 
+import { getServices } from "@/app/di/services";
 import { useAuth } from "@/app/state";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
+import type { BackofficeArtisan, BackofficeArtisanStatus } from "@/services/backoffice-artisans-service";
 
-type ArtisanStatus = "Actif" | "En attente" | "Suspendu";
-
-type ArtisanProfile = {
-  id: string;
-  fullName: string;
-  craft: string;
-  city: string;
-  email: string;
-  phone: string;
-  photoUrl: string;
-  bio: string;
-  status: ArtisanStatus;
-};
-
-const STATIC_ARTISANS: ArtisanProfile[] = [
-  {
-    id: "ART-3021",
-    fullName: "Awa Ndiaye",
-    craft: "Maroquinerie",
-    city: "Dakar",
-    email: "awa.ndiaye@sendiaba.com",
-    phone: "+221 77 102 00 11",
-    photoUrl:
-      "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=600&q=80",
-    bio: "Artisane specialisee dans les sacs et accessoires en cuir naturel.",
-    status: "Actif",
-  },
-  {
-    id: "ART-3022",
-    fullName: "Cheikh Mbodj",
-    craft: "Sculpture sur bois",
-    city: "Saint-Louis",
-    email: "cheikh.mbodj@sendiaba.com",
-    phone: "+221 77 318 42 90",
-    photoUrl:
-      "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=600&q=80",
-    bio: "Sculpteur traditionnel proposant des pieces decoratives contemporaines.",
-    status: "En attente",
-  },
-  {
-    id: "ART-3023",
-    fullName: "Nene Faye",
-    craft: "Textile",
-    city: "Thies",
-    email: "nene.faye@sendiaba.com",
-    phone: "+221 76 490 18 33",
-    photoUrl:
-      "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=600&q=80",
-    bio: "Creation de tissus artisanaux avec techniques de teinture locale.",
-    status: "Actif",
-  },
-];
-
-function statusClasses(status: ArtisanStatus): string {
+function statusClasses(status: BackofficeArtisanStatus): string {
   if (status === "Actif") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-700";
   if (status === "Suspendu") return "border-rose-500/40 bg-rose-500/10 text-rose-700";
   return "border-amber-500/40 bg-amber-500/10 text-amber-700";
@@ -67,28 +16,80 @@ function statusClasses(status: ArtisanStatus): string {
 
 export default function BackofficeArtisansPage() {
   const { session, isAuthenticated } = useAuth();
+  const { authService, backofficeArtisansService } = getServices();
   const isAdmin = isAuthenticated && session?.role === "admin";
-  const [artisans, setArtisans] = useState<ArtisanProfile[]>(STATIC_ARTISANS);
+  const [artisans, setArtisans] = useState<BackofficeArtisan[]>([]);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"Tous" | ArtisanStatus>("Tous");
-  const [editingArtisan, setEditingArtisan] = useState<ArtisanProfile | null>(null);
-  const [draftArtisan, setDraftArtisan] = useState<ArtisanProfile | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"Tous" | BackofficeArtisanStatus>("Tous");
+  const [editingArtisan, setEditingArtisan] = useState<BackofficeArtisan | null>(null);
+  const [draftArtisan, setDraftArtisan] = useState<BackofficeArtisan | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const filteredArtisans = useMemo(() => {
-    return artisans.filter((artisan) => {
-      const bySearch =
-        search.trim() === "" ||
-        artisan.fullName.toLowerCase().includes(search.toLowerCase()) ||
-        artisan.email.toLowerCase().includes(search.toLowerCase()) ||
-        artisan.craft.toLowerCase().includes(search.toLowerCase());
-      const byStatus = statusFilter === "Tous" || artisan.status === statusFilter;
-      return bySearch && byStatus;
-    });
-  }, [artisans, search, statusFilter]);
+  useEffect(() => {
+    if (!isAdmin) {
+      setIsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      const accessToken = authService.getAccessToken();
+      if (!accessToken) {
+        if (!cancelled) {
+          setErrorMessage("Session invalide. Veuillez vous reconnecter.");
+          setIsLoading(false);
+        }
+        return;
+      }
+      try {
+        if (!cancelled) {
+          setIsLoading(true);
+          setErrorMessage(null);
+        }
+        const data = await backofficeArtisansService.list(accessToken, {
+          search,
+          status: statusFilter,
+          page: 1,
+          limit: 20,
+        });
+        if (!cancelled) {
+          setArtisans(data.items);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "Impossible de charger la liste des artisans.",
+          );
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }, 250);
 
-  const openEditor = (artisan: ArtisanProfile) => {
-    setEditingArtisan(artisan);
-    setDraftArtisan({ ...artisan });
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [authService, backofficeArtisansService, isAdmin, search, statusFilter]);
+
+  const openEditor = async (artisan: BackofficeArtisan) => {
+    const accessToken = authService.getAccessToken();
+    if (!accessToken) {
+      setErrorMessage("Session invalide. Veuillez vous reconnecter.");
+      return;
+    }
+    try {
+      const details = await backofficeArtisansService.getById(accessToken, artisan.id);
+      setEditingArtisan(details);
+      setDraftArtisan(details);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Impossible de charger le detail artisan.",
+      );
+    }
   };
 
   const closeEditor = () => {
@@ -96,30 +97,72 @@ export default function BackofficeArtisansPage() {
     setDraftArtisan(null);
   };
 
-  const updateDraft = <K extends keyof ArtisanProfile>(key: K, value: ArtisanProfile[K]) => {
+  const updateDraft = <K extends keyof BackofficeArtisan>(key: K, value: BackofficeArtisan[K]) => {
     if (!draftArtisan) return;
     setDraftArtisan({ ...draftArtisan, [key]: value });
   };
 
-  const onPhotoUpload = (event: ChangeEvent<HTMLInputElement>) => {
+  const onPhotoUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !draftArtisan) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const next = typeof reader.result === "string" ? reader.result : draftArtisan.photoUrl;
-      setDraftArtisan((current) => (current ? { ...current, photoUrl: next } : current));
-    };
-    reader.readAsDataURL(file);
+    const accessToken = authService.getAccessToken();
+    if (!file || !draftArtisan || !accessToken) return;
+    try {
+      setIsSaving(true);
+      const data = await backofficeArtisansService.uploadPhoto(accessToken, draftArtisan.id, file);
+      setDraftArtisan((current) => (current ? { ...current, photoUrl: data.photoUrl } : current));
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Upload photo impossible.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const onSave = (event: FormEvent<HTMLFormElement>) => {
+  const onSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!editingArtisan || !draftArtisan) return;
-    setArtisans((current) =>
-      current.map((artisan) => (artisan.id === editingArtisan.id ? draftArtisan : artisan)),
-    );
-    closeEditor();
+    const accessToken = authService.getAccessToken();
+    if (!editingArtisan || !draftArtisan || !accessToken) return;
+    try {
+      setIsSaving(true);
+      const updated = await backofficeArtisansService.update(accessToken, editingArtisan.id, {
+        fullName: draftArtisan.fullName,
+        craft: draftArtisan.craft,
+        city: draftArtisan.city,
+        email: draftArtisan.email,
+        phone: draftArtisan.phone,
+        photoUrl: draftArtisan.photoUrl,
+        bio: draftArtisan.bio,
+        status: draftArtisan.status,
+      });
+      setArtisans((current) =>
+        current.map((artisan) => (artisan.id === editingArtisan.id ? updated : artisan)),
+      );
+      closeEditor();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Mise a jour artisan impossible.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const quickToggleStatus = async (artisan: BackofficeArtisan) => {
+    const accessToken = authService.getAccessToken();
+    if (!accessToken) return;
+    const nextStatus: BackofficeArtisanStatus =
+      artisan.status === "Suspendu" ? "Actif" : "Suspendu";
+    try {
+      const data = await backofficeArtisansService.updateStatus(
+        accessToken,
+        artisan.id,
+        nextStatus,
+      );
+      setArtisans((current) =>
+        current.map((item) =>
+          item.id === artisan.id ? { ...item, status: data.status } : item,
+        ),
+      );
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Changement de statut impossible.");
+    }
   };
 
   if (!isAdmin) {
@@ -134,6 +177,17 @@ export default function BackofficeArtisansPage() {
               Retour a l'accueil
             </Button>
           </Link>
+        </div>
+      </main>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <main className="min-h-screen bg-background px-6 pb-16 pt-32 md:px-12">
+        <Navbar />
+        <div className="mx-auto max-w-7xl">
+          <p className="text-muted-foreground">Chargement des artisans...</p>
         </div>
       </main>
     );
@@ -154,6 +208,11 @@ export default function BackofficeArtisansPage() {
           <p className="mt-3 text-muted-foreground">
             Modifiez les informations profil artisan, y compris la photo et les details publics.
           </p>
+          {errorMessage && (
+            <p className="mt-4 border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {errorMessage}
+            </p>
+          )}
         </header>
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -170,7 +229,11 @@ export default function BackofficeArtisansPage() {
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Statut</p>
             <select
               value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value as "Tous" | ArtisanStatus)}
+              onChange={(event) =>
+                setStatusFilter(
+                  event.target.value as "Tous" | BackofficeArtisanStatus,
+                )
+              }
               className="mt-2 h-11 w-full border border-border bg-background/80 px-3 text-sm outline-none transition-colors focus:border-primary/70"
             >
               <option value="Tous">Tous</option>
@@ -182,7 +245,7 @@ export default function BackofficeArtisansPage() {
         </section>
 
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          {filteredArtisans.map((artisan, index) => (
+          {artisans.map((artisan, index) => (
             <motion.article
               key={artisan.id}
               initial={{ opacity: 0, y: 12 }}
@@ -217,16 +280,23 @@ export default function BackofficeArtisansPage() {
 
               <div className="mt-5 flex justify-end">
                 <Button
+                  variant="ghost"
+                  className="mr-2 rounded-none uppercase tracking-[0.18em]"
+                  onClick={() => void quickToggleStatus(artisan)}
+                >
+                  {artisan.status === "Suspendu" ? "Activer" : "Suspendre"}
+                </Button>
+                <Button
                   variant="outline"
                   className="rounded-none uppercase tracking-[0.18em]"
-                  onClick={() => openEditor(artisan)}
+                  onClick={() => void openEditor(artisan)}
                 >
                   Modifier
                 </Button>
               </div>
             </motion.article>
           ))}
-          {filteredArtisans.length === 0 && (
+          {artisans.length === 0 && (
             <div className="border border-border px-4 py-10 text-center text-sm text-muted-foreground xl:col-span-2">
               Aucun artisan ne correspond aux filtres.
             </div>
@@ -342,7 +412,12 @@ export default function BackofficeArtisansPage() {
                     <span className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Statut</span>
                     <select
                       value={draftArtisan.status}
-                      onChange={(event) => updateDraft("status", event.target.value as ArtisanStatus)}
+                      onChange={(event) =>
+                        updateDraft(
+                          "status",
+                          event.target.value as BackofficeArtisanStatus,
+                        )
+                      }
                       className="h-10 w-full border border-border bg-background/80 px-3 text-sm outline-none focus:border-primary/70"
                     >
                       <option value="Actif">Actif</option>
@@ -353,7 +428,7 @@ export default function BackofficeArtisansPage() {
                   <label className="space-y-2 md:col-span-2">
                     <span className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Biographie</span>
                     <textarea
-                      value={draftArtisan.bio}
+                      value={draftArtisan.bio ?? ""}
                       onChange={(event) => updateDraft("bio", event.target.value)}
                       className="min-h-28 w-full border border-border bg-background/80 px-3 py-2 text-sm outline-none focus:border-primary/70"
                     />
@@ -370,7 +445,11 @@ export default function BackofficeArtisansPage() {
                 >
                   Annuler
                 </Button>
-                <Button type="submit" className="rounded-none uppercase tracking-[0.2em]">
+                <Button
+                  type="submit"
+                  disabled={isSaving}
+                  className="rounded-none uppercase tracking-[0.2em]"
+                >
                   Enregistrer
                 </Button>
               </div>

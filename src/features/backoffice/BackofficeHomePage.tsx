@@ -1,77 +1,117 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 
+import { getServices } from "@/app/di/services";
 import { useAuth } from "@/app/state";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 
-const STATIC_KPIS = {
-  totalVisitors: 12480,
-  totalClients: 3290,
-  totalUsers: 4125,
-  totalArtisans: 186,
-  ordersThisMonth: 748,
-  monthlyRevenue: 92450,
-};
-
-const STATIC_REVENUE_TREND = [
-  { month: "Jan", value: 42000 },
-  { month: "Fev", value: 51000 },
-  { month: "Mar", value: 49000 },
-  { month: "Avr", value: 57000 },
-  { month: "Mai", value: 63000 },
-  { month: "Juin", value: 70400 },
-  { month: "Juil", value: 76500 },
-  { month: "Aou", value: 82100 },
-  { month: "Sep", value: 92450 },
-];
-
-const STATIC_SEGMENTS = [
-  { label: "Mode", value: 38, color: "#C56E47" },
-  { label: "Maison", value: 26, color: "#8A7C6A" },
-  { label: "Art", value: 19, color: "#4B6A57" },
-  { label: "Accessoires", value: 17, color: "#2A2A2A" },
-];
-
 export default function BackofficeHomePage() {
   const { session, isAuthenticated } = useAuth();
+  const { authService, backofficeDashboardService } = getServices();
   const isAdmin = isAuthenticated && session?.role === "admin";
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [kpis, setKpis] = useState<Awaited<ReturnType<typeof backofficeDashboardService.getKpis>> | null>(null);
+  const [trend, setTrend] = useState<Awaited<ReturnType<typeof backofficeDashboardService.getRevenueTrend>> | null>(null);
+  const [segments, setSegments] = useState<Awaited<ReturnType<typeof backofficeDashboardService.getCategorySegments>> | null>(null);
+  const [overview, setOverview] = useState<Awaited<ReturnType<typeof backofficeDashboardService.getOverview>> | null>(null);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      setIsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    const loadDashboard = async () => {
+      const accessToken = authService.getAccessToken();
+      if (!accessToken) {
+        if (!cancelled) {
+          setErrorMessage("Session invalide. Veuillez vous reconnecter.");
+          setIsLoading(false);
+        }
+        return;
+      }
+      try {
+        setIsLoading(true);
+        setErrorMessage(null);
+        const [nextKpis, nextTrend, nextSegments, nextOverview] = await Promise.all([
+          backofficeDashboardService.getKpis(accessToken),
+          backofficeDashboardService.getRevenueTrend(accessToken, "9m"),
+          backofficeDashboardService.getCategorySegments(accessToken),
+          backofficeDashboardService.getOverview(accessToken),
+        ]);
+        if (!cancelled) {
+          setKpis(nextKpis);
+          setTrend(nextTrend);
+          setSegments(nextSegments);
+          setOverview(nextOverview);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setErrorMessage(
+            error instanceof Error ? error.message : "Impossible de charger le dashboard.",
+          );
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+    void loadDashboard();
+    return () => {
+      cancelled = true;
+    };
+  }, [authService, backofficeDashboardService, isAdmin]);
 
   const cards = useMemo(() => {
-    const k = STATIC_KPIS;
+    const k = kpis ?? {
+      totalVisitors: 0,
+      totalClients: 0,
+      totalUsers: 0,
+      totalArtisans: 0,
+      ordersThisMonth: 0,
+      monthlyRevenue: 0,
+      currency: "EUR",
+    };
     return [
       { label: "Visiteurs", value: k.totalVisitors },
       { label: "Clients", value: k.totalClients },
       { label: "Utilisateurs", value: k.totalUsers },
       { label: "Artisans", value: k.totalArtisans },
       { label: "Commandes / mois", value: k.ordersThisMonth },
-      { label: "Revenus / mois", value: `${k.monthlyRevenue.toLocaleString("fr-FR")} EUR` },
+      {
+        label: "Revenus / mois",
+        value: `${k.monthlyRevenue.toLocaleString("fr-FR")} ${k.currency}`,
+      },
     ];
-  }, []);
+  }, [kpis]);
 
-  const trendMax = useMemo(
-    () => Math.max(...STATIC_REVENUE_TREND.map((point) => point.value)),
-    [],
-  );
+  const trendPoints = trend?.points ?? [];
+  const trendMax = useMemo(() => {
+    if (trendPoints.length === 0) return 1;
+    return Math.max(...trendPoints.map((point) => point.value), 1);
+  }, [trendPoints]);
   const trendPolyline = useMemo(() => {
     const width = 100;
     const height = 36;
-    return STATIC_REVENUE_TREND.map((point, index) => {
-      const x = (index / (STATIC_REVENUE_TREND.length - 1)) * width;
+    if (trendPoints.length <= 1) return "0,36 100,36";
+    return trendPoints.map((point, index) => {
+      const x = (index / (trendPoints.length - 1)) * width;
       const y = height - (point.value / trendMax) * height;
       return `${x},${y}`;
     }).join(" ");
-  }, [trendMax]);
+  }, [trendMax, trendPoints]);
 
   const segmentGradient = useMemo(() => {
     let cursor = 0;
-    return STATIC_SEGMENTS.map((segment) => {
+    const activeSegments = segments?.segments ?? [];
+    return activeSegments.map((segment) => {
       const start = cursor;
       cursor += segment.value;
       return `${segment.color} ${start}% ${cursor}%`;
-    }).join(", ");
-  }, []);
+    }).join(", ") || "#2A2A2A 0% 100%";
+  }, [segments]);
 
   if (!isAdmin) {
     return (
@@ -88,6 +128,17 @@ export default function BackofficeHomePage() {
     );
   }
 
+  if (isLoading) {
+    return (
+      <main className="min-h-screen bg-background px-6 pb-16 pt-32 md:px-12">
+        <Navbar />
+        <div className="mx-auto max-w-7xl">
+          <p className="text-muted-foreground">Chargement du dashboard...</p>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-background px-6 pb-16 pt-32 md:px-12">
       <Navbar />
@@ -99,10 +150,16 @@ export default function BackofficeHomePage() {
       >
         <header className="border border-border bg-muted/20 p-8">
           <p className="text-xs uppercase tracking-[0.3em] text-primary">Back-office</p>
-          <h1 className="mt-4 font-serif text-5xl">Tableau de bord administrateur</h1>
+          <h1 className="mt-4 font-serif text-5xl">{overview?.title ?? "Tableau de bord administrateur"}</h1>
           <p className="mt-3 text-muted-foreground">
-            Bonjour {session?.displayName}, suivez les performances globales de la plateforme.
+            {overview?.subtitle ??
+              `Bonjour ${session?.displayName ?? ""}, suivez les performances globales de la plateforme.`}
           </p>
+          {errorMessage && (
+            <p className="mt-4 border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {errorMessage}
+            </p>
+          )}
         </header>
 
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -132,7 +189,9 @@ export default function BackofficeHomePage() {
                 <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Revenus 9 mois</p>
                 <h3 className="mt-2 font-serif text-3xl">Tendance de croissance</h3>
               </div>
-              <p className="text-sm text-muted-foreground">+22.4% vs periode precedente</p>
+              <p className="text-sm text-muted-foreground">
+                +{trend?.growthVsPreviousPeriod ?? 0}% vs periode precedente
+              </p>
             </div>
 
             <div className="mt-6 rounded-none border border-border/60 bg-background/70 p-4">
@@ -154,7 +213,7 @@ export default function BackofficeHomePage() {
                 />
               </svg>
               <div className="mt-2 grid grid-cols-9 gap-2 text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                {STATIC_REVENUE_TREND.map((point) => (
+                {trendPoints.map((point) => (
                   <span key={point.month}>{point.month}</span>
                 ))}
               </div>
@@ -187,7 +246,7 @@ export default function BackofficeHomePage() {
             </div>
 
             <div className="mt-7 space-y-3">
-              {STATIC_SEGMENTS.map((segment, index) => (
+              {(segments?.segments ?? []).map((segment, index) => (
                 <div key={segment.label}>
                   <div className="mb-1 flex items-center justify-between text-xs uppercase tracking-[0.18em]">
                     <span className="text-muted-foreground">{segment.label}</span>
@@ -211,21 +270,19 @@ export default function BackofficeHomePage() {
         <section className="border border-border p-6">
           <h2 className="font-serif text-3xl">Modules back-office</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Vous pourrez ensuite connecter ici les ecrans de gestion complete (utilisateurs, artisans, contenu, analytics).
+            Navigation rapide vers les modules administrateur.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
-            <Link href="/backoffice">
-              <Button className="rounded-none uppercase tracking-[0.2em]">Dashboard</Button>
-            </Link>
-            <Link href="/backoffice/utilisateurs">
-              <Button variant="outline" className="rounded-none uppercase tracking-[0.2em]">Utilisateurs</Button>
-            </Link>
-            <Link href="/backoffice/artisans">
-              <Button variant="outline" className="rounded-none uppercase tracking-[0.2em]">Artisans</Button>
-            </Link>
-            <Link href="/backoffice/contenu">
-              <Button variant="outline" className="rounded-none uppercase tracking-[0.2em]">Contenu</Button>
-            </Link>
+            {(overview?.modules ?? []).map((module, index) => (
+              <Link key={module.key} href={module.href}>
+                <Button
+                  variant={index === 0 ? "default" : "outline"}
+                  className="rounded-none uppercase tracking-[0.2em]"
+                >
+                  {module.label}
+                </Button>
+              </Link>
+            ))}
           </div>
         </section>
       </motion.div>

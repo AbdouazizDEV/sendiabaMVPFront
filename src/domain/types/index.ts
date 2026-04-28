@@ -1,5 +1,6 @@
 export type { Artisan } from "./artisan";
 export type {
+  AuthTokenBundle,
   AuthCredentials,
   AuthSession,
   RegisterPayload,

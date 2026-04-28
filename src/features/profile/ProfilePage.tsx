@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
 
 import { getServices } from "@/app/di/services";
@@ -14,7 +14,8 @@ import { ProfilePersonalInfoForm } from "./components/ProfilePersonalInfoForm";
 
 export default function ProfilePage() {
   const { session, isAuthenticated } = useAuth();
-  const { orderService, artisanService, productService, userProfileService } = getServices();
+  const { authService, orderService, artisanService, productService, userProfileService } =
+    getServices();
 
   if (!isAuthenticated || !session) {
     return (
@@ -31,10 +32,74 @@ export default function ProfilePage() {
     );
   }
 
-  const [profile, setProfile] = useState(() => userProfileService.getOrCreate(session));
+  const [profile, setProfile] = useState<Awaited<
+    ReturnType<typeof userProfileService.getCurrentProfile>
+  > | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const orders = orderService.listForUser(session.id);
   const artisans = artisanService.list();
   const allProducts = productService.list();
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadProfile = async () => {
+      const accessToken = authService.getAccessToken();
+      if (!accessToken) {
+        setErrorMessage("Session invalide. Veuillez vous reconnecter.");
+        setIsLoadingProfile(false);
+        return;
+      }
+
+      try {
+        setIsLoadingProfile(true);
+        setErrorMessage(null);
+        const next = await userProfileService.getCurrentProfile(accessToken);
+        if (!cancelled) {
+          setProfile(next);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setErrorMessage(
+            error instanceof Error ? error.message : "Impossible de charger votre profil.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingProfile(false);
+        }
+      }
+    };
+
+    void loadProfile();
+    return () => {
+      cancelled = true;
+    };
+  }, [authService, userProfileService]);
+
+  if (isLoadingProfile) {
+    return (
+      <main className="min-h-screen bg-background">
+        <Navbar />
+        <section className="container mx-auto px-6 pb-20 pt-32 md:px-12">
+          <p className="text-muted-foreground">Chargement de votre profil...</p>
+        </section>
+        <Footer />
+      </main>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <main className="min-h-screen bg-background">
+        <Navbar />
+        <section className="container mx-auto px-6 pb-20 pt-32 md:px-12">
+          <p className="text-destructive">{errorMessage ?? "Profil indisponible."}</p>
+        </section>
+        <Footer />
+      </main>
+    );
+  }
 
   const favoriteArtisan = profile.favoriteArtisanId
     ? artisanService.getById(profile.favoriteArtisanId)
@@ -53,8 +118,10 @@ export default function ProfilePage() {
         <div className="grid grid-cols-1 gap-8 xl:grid-cols-[1fr_1fr]">
           <ProfilePersonalInfoForm
             profile={profile}
-            onSave={(payload) => {
-              const next = userProfileService.updatePersonalInfo(session, payload);
+            onSave={async (payload) => {
+              const accessToken = authService.getAccessToken();
+              if (!accessToken) throw new Error("Session invalide. Veuillez vous reconnecter.");
+              const next = await userProfileService.updatePersonalInfo(accessToken, payload);
               setProfile(next);
             }}
           />
@@ -63,9 +130,18 @@ export default function ProfilePage() {
             artisans={artisans}
             favoriteArtisan={favoriteArtisan}
             favoriteArtisanId={profile.favoriteArtisanId}
-            onSelectFavoriteArtisan={(artisanId) => {
-              const next = userProfileService.setFavoriteArtisan(session, artisanId);
-              setProfile(next);
+            onSelectFavoriteArtisan={async (artisanId) => {
+              const accessToken = authService.getAccessToken();
+              if (!accessToken) throw new Error("Session invalide. Veuillez vous reconnecter.");
+              const data = await userProfileService.setFavoriteArtisan(accessToken, artisanId);
+              setProfile((current) =>
+                current
+                  ? {
+                      ...current,
+                      favoriteArtisanId: data.favoriteArtisanId ?? undefined,
+                    }
+                  : current,
+              );
             }}
           />
         </div>
@@ -73,13 +149,31 @@ export default function ProfilePage() {
         <ProfileFavoriteProductsSection
           allProducts={allProducts}
           favoriteProducts={favoriteProducts}
-          onAddFavoriteProduct={(productId) => {
-            const next = userProfileService.addFavoriteProduct(session, productId);
-            setProfile(next);
+          onAddFavoriteProduct={async (productId) => {
+            const accessToken = authService.getAccessToken();
+            if (!accessToken) throw new Error("Session invalide. Veuillez vous reconnecter.");
+            const data = await userProfileService.addFavoriteProduct(accessToken, productId);
+            setProfile((current) =>
+              current
+                ? {
+                    ...current,
+                    favoriteProductIds: data.favoriteProductIds,
+                  }
+                : current,
+            );
           }}
-          onRemoveFavoriteProduct={(productId) => {
-            const next = userProfileService.removeFavoriteProduct(session, productId);
-            setProfile(next);
+          onRemoveFavoriteProduct={async (productId) => {
+            const accessToken = authService.getAccessToken();
+            if (!accessToken) throw new Error("Session invalide. Veuillez vous reconnecter.");
+            const data = await userProfileService.removeFavoriteProduct(accessToken, productId);
+            setProfile((current) =>
+              current
+                ? {
+                    ...current,
+                    favoriteProductIds: data.favoriteProductIds,
+                  }
+                : current,
+            );
           }}
         />
 

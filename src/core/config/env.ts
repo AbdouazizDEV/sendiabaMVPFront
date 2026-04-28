@@ -1,9 +1,10 @@
+import { API_BASE_URL } from "./api-url";
+
 /**
- * Runtime configuration from Vite env (prefixed with VITE_).
- * Backend base URL is optional until the API exists — empty string keeps the app on static data.
+ * Runtime app configuration.
  */
 export type AppEnv = {
-  /** e.g. https://api.sendiaba.com — no trailing slash */
+  /** Backend API base URL (no trailing slash). */
   apiBaseUrl: string;
 };
 
@@ -16,7 +17,7 @@ function normalizeBaseUrl(raw: string | undefined): string {
 
 export function readAppEnv(): AppEnv {
   return {
-    apiBaseUrl: normalizeBaseUrl(import.meta.env.VITE_API_URL),
+    apiBaseUrl: normalizeBaseUrl(API_BASE_URL),
   };
 }
 

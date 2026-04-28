@@ -1,95 +1,108 @@
-import type { AuthSession, UserProfile } from "@/domain/types";
+import { API_BASE_URL } from "@/core/config";
+import type { UserProfile } from "@/domain/types";
 
-const PROFILES_KEY = "sendiaba.user-profiles";
+type ProfileEnvelope<T> = {
+  success: boolean;
+  data: T;
+};
 
-function inBrowser(): boolean {
-  return typeof window !== "undefined";
+type FavoriteArtisanPayload = {
+  favoriteArtisanId: string | null;
+};
+
+type FavoriteProductsPayload = {
+  favoriteProductIds: string[];
+};
+
+function buildAuthHeaders(accessToken: string, includeJson = false): HeadersInit {
+  return {
+    Accept: "application/json",
+    ...(includeJson ? { "Content-Type": "application/json" } : {}),
+    Authorization: `Bearer ${accessToken}`,
+  };
 }
 
-function safeRead<T>(key: string, fallback: T): T {
-  if (!inBrowser()) return fallback;
-  const raw = window.localStorage.getItem(key);
-  if (!raw) return fallback;
+async function parseApiError(response: Response): Promise<Error> {
+  const fallback = "Impossible de traiter la requete profil.";
   try {
-    return JSON.parse(raw) as T;
+    const payload = (await response.json()) as {
+      message?: string;
+      error?: { message?: string };
+    };
+    const message = payload.error?.message ?? payload.message ?? fallback;
+    return new Error(message);
   } catch {
-    return fallback;
+    return new Error(fallback);
   }
 }
 
-function safeWrite<T>(key: string, value: T): void {
-  if (!inBrowser()) return;
-  window.localStorage.setItem(key, JSON.stringify(value));
-}
-
-function toMap(): Record<string, UserProfile> {
-  return safeRead<Record<string, UserProfile>>(PROFILES_KEY, {});
+async function assertOk<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    throw await parseApiError(response);
+  }
+  return response.json() as Promise<T>;
 }
 
 export class UserProfileService {
-  getOrCreate(session: AuthSession): UserProfile {
-    const map = toMap();
-    const existing = map[session.id];
-    if (existing) return existing;
-
-    const created: UserProfile = {
-      userId: session.id,
-      fullName: session.displayName,
-      phone: "",
-      country: "Senegal",
-      city: "",
-      favoriteProductIds: [],
-    };
-    map[session.id] = created;
-    safeWrite(PROFILES_KEY, map);
-    return created;
+  async getCurrentProfile(accessToken: string): Promise<UserProfile> {
+    const response = await fetch(`${API_BASE_URL}/v1/profile/me`, {
+      method: "GET",
+      headers: buildAuthHeaders(accessToken),
+    });
+    return assertOk<UserProfile>(response);
   }
 
-  updatePersonalInfo(
-    session: AuthSession,
+  async updatePersonalInfo(
+    accessToken: string,
     payload: Pick<UserProfile, "fullName" | "phone" | "country" | "city">,
-  ): UserProfile {
-    const map = toMap();
-    const profile = this.getOrCreate(session);
-    const next: UserProfile = { ...profile, ...payload };
-    map[session.id] = next;
-    safeWrite(PROFILES_KEY, map);
-    return next;
+  ): Promise<UserProfile> {
+    const response = await fetch(`${API_BASE_URL}/v1/profile/me/personal-info`, {
+      method: "PUT",
+      headers: buildAuthHeaders(accessToken, true),
+      body: JSON.stringify(payload),
+    });
+    const envelope = await assertOk<ProfileEnvelope<UserProfile>>(response);
+    return envelope.data;
   }
 
-  setFavoriteArtisan(session: AuthSession, artisanId?: string): UserProfile {
-    const map = toMap();
-    const profile = this.getOrCreate(session);
-    const next: UserProfile = { ...profile, favoriteArtisanId: artisanId };
-    map[session.id] = next;
-    safeWrite(PROFILES_KEY, map);
-    return next;
+  async setFavoriteArtisan(
+    accessToken: string,
+    artisanId?: string,
+  ): Promise<FavoriteArtisanPayload> {
+    const response = await fetch(`${API_BASE_URL}/v1/profile/me/favorite-artisan`, {
+      method: "PUT",
+      headers: buildAuthHeaders(accessToken, true),
+      body: JSON.stringify({ artisanId: artisanId ?? null }),
+    });
+    const envelope = await assertOk<ProfileEnvelope<FavoriteArtisanPayload>>(response);
+    return envelope.data;
   }
 
-  addFavoriteProduct(session: AuthSession, productId: string): UserProfile {
-    const map = toMap();
-    const profile = this.getOrCreate(session);
-    if (profile.favoriteProductIds.includes(productId)) {
-      return profile;
-    }
-    const next: UserProfile = {
-      ...profile,
-      favoriteProductIds: [...profile.favoriteProductIds, productId],
-    };
-    map[session.id] = next;
-    safeWrite(PROFILES_KEY, map);
-    return next;
+  async addFavoriteProduct(
+    accessToken: string,
+    productId: string,
+  ): Promise<FavoriteProductsPayload> {
+    const response = await fetch(`${API_BASE_URL}/v1/profile/me/favorite-products`, {
+      method: "POST",
+      headers: buildAuthHeaders(accessToken, true),
+      body: JSON.stringify({ productId }),
+    });
+    const envelope = await assertOk<ProfileEnvelope<FavoriteProductsPayload>>(response);
+    return envelope.data;
   }
 
-  removeFavoriteProduct(session: AuthSession, productId: string): UserProfile {
-    const map = toMap();
-    const profile = this.getOrCreate(session);
-    const next: UserProfile = {
-      ...profile,
-      favoriteProductIds: profile.favoriteProductIds.filter((id) => id !== productId),
-    };
-    map[session.id] = next;
-    safeWrite(PROFILES_KEY, map);
-    return next;
+  async removeFavoriteProduct(
+    accessToken: string,
+    productId: string,
+  ): Promise<FavoriteProductsPayload> {
+    const response = await fetch(
+      `${API_BASE_URL}/v1/profile/me/favorite-products/${encodeURIComponent(productId)}`,
+      {
+        method: "DELETE",
+        headers: buildAuthHeaders(accessToken),
+      },
+    );
+    const envelope = await assertOk<ProfileEnvelope<FavoriteProductsPayload>>(response);
+    return envelope.data;
   }
 }
