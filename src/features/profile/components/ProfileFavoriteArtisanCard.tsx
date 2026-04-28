@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 
@@ -15,7 +16,7 @@ type ProfileFavoriteArtisanCardProps = {
   artisans: readonly Artisan[];
   favoriteArtisan: Artisan | undefined;
   favoriteArtisanId?: string;
-  onSelectFavoriteArtisan: (artisanId: string | undefined) => void;
+  onSelectFavoriteArtisan: (artisanId: string | undefined) => Promise<void>;
 };
 
 export function ProfileFavoriteArtisanCard({
@@ -24,6 +25,9 @@ export function ProfileFavoriteArtisanCard({
   favoriteArtisanId,
   onSelectFavoriteArtisan,
 }: ProfileFavoriteArtisanCardProps) {
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+
   return (
     <motion.section
       initial={{ opacity: 0, y: 24 }}
@@ -35,9 +39,21 @@ export function ProfileFavoriteArtisanCard({
 
       <Select
         value={favoriteArtisanId ?? "none"}
-        onValueChange={(value) => onSelectFavoriteArtisan(value === "none" ? undefined : value)}
+        onValueChange={async (value) => {
+          setErrorMessage(null);
+          setIsUpdating(true);
+          try {
+            await onSelectFavoriteArtisan(value === "none" ? undefined : value);
+          } catch (error) {
+            setErrorMessage(
+              error instanceof Error ? error.message : "Impossible de mettre a jour l'artisan favori.",
+            );
+          } finally {
+            setIsUpdating(false);
+          }
+        }}
       >
-        <SelectTrigger className="h-11 rounded-none">
+        <SelectTrigger className="h-11 rounded-none" disabled={isUpdating}>
           <SelectValue placeholder="Choisir un artisan favori" />
         </SelectTrigger>
         <SelectContent>
@@ -49,6 +65,12 @@ export function ProfileFavoriteArtisanCard({
           ))}
         </SelectContent>
       </Select>
+
+      {errorMessage && (
+        <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {errorMessage}
+        </p>
+      )}
 
       {favoriteArtisan ? (
         <article className="grid grid-cols-[100px_1fr] gap-4 border border-border p-4">

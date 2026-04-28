@@ -12,6 +12,14 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type AuthMode = "login" | "register";
 
@@ -23,24 +31,35 @@ export function AuthFormPanel({ onSuccess }: AuthFormPanelProps) {
   const { login, register } = useAuth();
   const [mode, setMode] = useState<AuthMode>("login");
   const [displayName, setDisplayName] = useState("");
+  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [confirmEmailModalOpen, setConfirmEmailModalOpen] = useState(false);
+  const [pendingConfirmationEmail, setPendingConfirmationEmail] = useState("");
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage(null);
+    setIsSubmitting(true);
 
     try {
-      const session =
-        mode === "login"
-          ? login({ email, password })
-          : register({ displayName, email, password });
-
-      onSuccess(session);
+      if (mode === "login") {
+        const session = await login({ email, password });
+        onSuccess(session);
+      } else {
+        await register({ displayName, phone, email, password });
+        setPendingConfirmationEmail(email);
+        setConfirmEmailModalOpen(true);
+        setMode("login");
+        setPassword("");
+      }
     } catch (error) {
       const fallback = "Une erreur est survenue.";
       setErrorMessage(error instanceof Error ? error.message : fallback);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -86,16 +105,29 @@ export function AuthFormPanel({ onSuccess }: AuthFormPanelProps) {
       <CardContent>
         <form onSubmit={submit} className="space-y-5">
           {mode === "register" && (
-            <div className="space-y-2">
-              <Label htmlFor="displayName">Nom complet</Label>
-              <Input
-                id="displayName"
-                value={displayName}
-                onChange={(event) => setDisplayName(event.target.value)}
-                required
-                className="h-11 rounded-none"
-              />
-            </div>
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="displayName">Nom complet</Label>
+                <Input
+                  id="displayName"
+                  value={displayName}
+                  onChange={(event) => setDisplayName(event.target.value)}
+                  required
+                  className="h-11 rounded-none"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Telephone</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  required
+                  className="h-11 rounded-none"
+                />
+              </div>
+            </>
           )}
 
           <div className="space-y-2">
@@ -129,11 +161,37 @@ export function AuthFormPanel({ onSuccess }: AuthFormPanelProps) {
             </p>
           )}
 
-          <Button type="submit" className="h-12 w-full rounded-none uppercase tracking-[0.2em]">
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="h-12 w-full rounded-none uppercase tracking-[0.2em]"
+          >
             {mode === "login" ? "Se connecter" : "Creer mon compte"}
           </Button>
         </form>
       </CardContent>
+
+      <Dialog open={confirmEmailModalOpen} onOpenChange={setConfirmEmailModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmez votre email</DialogTitle>
+            <DialogDescription>
+              Un email de confirmation a ete envoye a{" "}
+              <span className="font-medium text-foreground">{pendingConfirmationEmail}</span>.
+              Ouvrez cet email puis cliquez sur le lien pour finaliser votre inscription et etre connecte automatiquement.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              className="rounded-none uppercase tracking-[0.2em]"
+              onClick={() => setConfirmEmailModalOpen(false)}
+            >
+              D'accord
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

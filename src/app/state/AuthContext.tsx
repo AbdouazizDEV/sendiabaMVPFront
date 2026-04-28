@@ -12,9 +12,9 @@ import type { AuthCredentials, AuthSession, RegisterPayload } from "@/domain/typ
 type AuthContextValue = {
   session: AuthSession | null;
   isAuthenticated: boolean;
-  login: (payload: AuthCredentials) => AuthSession;
-  register: (payload: RegisterPayload) => AuthSession;
-  logout: () => void;
+  login: (payload: AuthCredentials) => Promise<AuthSession>;
+  register: (payload: RegisterPayload) => Promise<AuthSession>;
+  logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -29,18 +29,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       session,
       isAuthenticated: Boolean(session),
-      login: (payload) => {
-        const next = authService.login(payload);
+      login: async (payload) => {
+        const next = await authService.login(payload);
         setSession(next);
         return next;
       },
-      register: (payload) => {
-        const next = authService.register(payload);
-        setSession(next);
+      register: async (payload) => {
+        const next = await authService.register(payload);
+        // Registration requires email confirmation before considering
+        // the user as authenticated in the app.
+        authService.clearLocalSession();
+        setSession(null);
         return next;
       },
-      logout: () => {
-        authService.logout();
+      logout: async () => {
+        await authService.logout();
         setSession(null);
       },
     }),

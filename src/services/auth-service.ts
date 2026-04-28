@@ -1,37 +1,32 @@
+import { API_BASE_URL } from "@/core/config";
 import type {
   AuthCredentials,
   AuthSession,
+  AuthTokenBundle,
   RegisterPayload,
-  UserRole,
 } from "@/domain/types";
 
-type StoredAccount = {
-  id: string;
-  displayName: string;
-  email: string;
-  password: string;
-  role: UserRole;
+const SESSION_KEY = "sendiaba.auth.session";
+const TOKENS_KEY = "sendiaba.auth.tokens";
+
+type StoredTokens = AuthTokenBundle & {
+  issuedAt: number;
 };
 
-const SESSION_KEY = "sendiaba.auth.session";
-const ACCOUNTS_KEY = "sendiaba.auth.accounts";
+type AuthApiSuccess = {
+  success: boolean;
+  session: AuthSession;
+  token: AuthTokenBundle;
+};
 
-const SEEDED_ACCOUNTS: StoredAccount[] = [
-  {
-    id: "usr-demo-abdou-aziz-diop",
-    displayName: "DIOP Abdou Aziz",
-    email: "abdouazizdiop583@gmail.com",
-    password: "abdouazizdiop",
-    role: "customer",
-  },
-  {
-    id: "usr-admin-sendiaba",
-    displayName: "Admin Sendiaba",
-    email: "admin@sendiaba.com",
-    password: "Admin@2026",
-    role: "admin",
-  },
-];
+type AuthApiError = {
+  success?: false;
+  error?: {
+    code?: string;
+    message?: string;
+  };
+  message?: string;
+};
 
 function inBrowser(): boolean {
   return typeof window !== "undefined";
@@ -53,99 +48,132 @@ function safeWrite<T>(key: string, value: T): void {
   window.localStorage.setItem(key, JSON.stringify(value));
 }
 
-function toSession(account: StoredAccount): AuthSession {
+function clearStoredAuth(): void {
+  if (!inBrowser()) return;
+  window.localStorage.removeItem(SESSION_KEY);
+  window.localStorage.removeItem(TOKENS_KEY);
+}
+
+function parseApiError(payload: unknown, fallback: string): string {
+  if (typeof payload === "string" && payload.trim() !== "") {
+    return payload;
+  }
+  if (!payload || typeof payload !== "object") {
+    return fallback;
+  }
+  const maybeError = payload as AuthApiError;
+  if (maybeError.error?.message) return maybeError.error.message;
+  if (maybeError.message) return maybeError.message;
+  return fallback;
+}
+
+async function postAuthEndpoint(
+  path: string,
+  body?: unknown,
+  bearerToken?: string,
+): Promise<AuthApiSuccess> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {}),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(parseApiError(payload, "Impossible de joindre le service d'authentification."));
+  }
+
+  const data = payload as Partial<AuthApiSuccess>;
+  if (!data.session || !data.token) {
+    throw new Error("Reponse d'authentification invalide.");
+  }
+
   return {
-    id: account.id,
-    displayName: account.displayName,
-    email: account.email,
-    role: account.role,
+    success: Boolean(data.success),
+    session: data.session,
+    token: data.token,
   };
 }
 
-function createId(prefix: string): string {
-  return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+function persistAuthSession(session: AuthSession, token: AuthTokenBundle): void {
+  safeWrite<AuthSession>(SESSION_KEY, session);
+  safeWrite<StoredTokens>(TOKENS_KEY, {
+    ...token,
+    issuedAt: Date.now(),
+  });
 }
 
-function getAccounts(): StoredAccount[] {
-  const accounts = safeRead<Array<Partial<StoredAccount>>>(ACCOUNTS_KEY, []);
-  let next: StoredAccount[] = accounts
-    .filter(
-      (account): account is Partial<StoredAccount> &
-        Pick<StoredAccount, "id" | "displayName" | "email" | "password"> =>
-        Boolean(account.id && account.displayName && account.email && account.password),
-    )
-    .map((account) => ({
-      id: account.id,
-      displayName: account.displayName,
-      email: account.email,
-      password: account.password,
-      role: account.role ?? "customer",
-    }));
+function normalizeRole(raw: string): AuthSession["role"] {
+  return raw.toUpperCase() === "ADMIN" ? "admin" : "customer";
+}
 
-  for (const seed of SEEDED_ACCOUNTS) {
-    const hasSeed = next.some(
-      (account) => account.email.toLowerCase() === seed.email.toLowerCase(),
-    );
-    if (!hasSeed) {
-      next = [...next, seed];
-    }
-  }
+function normalizeSession(session: AuthSession): AuthSession {
+  return {
+    ...session,
+    role: normalizeRole(session.role),
+  };
+}
 
-  if (next.length !== accounts.length) {
-    safeWrite(ACCOUNTS_KEY, next);
-  }
-
-  return next;
+function hasValidToken(tokens: StoredTokens | null): boolean {
+  if (!tokens) return false;
+  if (!tokens.accessToken || !tokens.refreshToken) return false;
+  const expiresAt = tokens.issuedAt + tokens.expiresIn * 1000;
+  return expiresAt > Date.now() + 10_000;
 }
 
 export class AuthService {
   getSession(): AuthSession | null {
-    return safeRead<AuthSession | null>(SESSION_KEY, null);
-  }
-
-  logout(): void {
-    if (!inBrowser()) return;
-    window.localStorage.removeItem(SESSION_KEY);
-  }
-
-  login(payload: AuthCredentials): AuthSession {
-    const accounts = getAccounts();
-    const account = accounts.find(
-      (candidate) =>
-        candidate.email.toLowerCase() === payload.email.toLowerCase() &&
-        candidate.password === payload.password,
-    );
-
-    if (!account) {
-      throw new Error("Email ou mot de passe invalide.");
+    const session = safeRead<AuthSession | null>(SESSION_KEY, null);
+    const tokens = safeRead<StoredTokens | null>(TOKENS_KEY, null);
+    if (!session || !hasValidToken(tokens)) {
+      clearStoredAuth();
+      return null;
     }
-
-    const session = toSession(account);
-    safeWrite(SESSION_KEY, session);
-    return session;
+    return normalizeSession(session);
   }
 
-  register(payload: RegisterPayload): AuthSession {
-    const accounts = getAccounts();
-    const alreadyExists = accounts.some(
-      (candidate) => candidate.email.toLowerCase() === payload.email.toLowerCase(),
-    );
+  getAccessToken(): string | null {
+    const tokens = safeRead<StoredTokens | null>(TOKENS_KEY, null);
+    if (!hasValidToken(tokens)) return null;
+    return tokens?.accessToken ?? null;
+  }
 
-    if (alreadyExists) {
-      throw new Error("Cet email est deja associe a un compte.");
+  async logout(): Promise<void> {
+    const token = this.getAccessToken();
+    try {
+      await postAuthEndpoint("/v1/auth/logout", undefined, token ?? undefined);
+    } catch {
+      // Even when network/API fails, clear local session to guarantee logout client-side.
+    } finally {
+      clearStoredAuth();
     }
+  }
 
-    const account: StoredAccount = {
-      id: createId("usr"),
-      displayName: payload.displayName,
-      email: payload.email,
-      password: payload.password,
-      role: "customer",
-    };
+  async login(payload: AuthCredentials): Promise<AuthSession> {
+    const result = await postAuthEndpoint("/v1/auth/login", payload);
+    const normalized = normalizeSession(result.session);
+    persistAuthSession(normalized, result.token);
+    return normalized;
+  }
 
-    safeWrite(ACCOUNTS_KEY, [...accounts, account]);
-    const session = toSession(account);
-    safeWrite(SESSION_KEY, session);
-    return session;
+  async register(payload: RegisterPayload): Promise<AuthSession> {
+    const result = await postAuthEndpoint("/v1/auth/register", payload);
+    const normalized = normalizeSession(result.session);
+    persistAuthSession(normalized, result.token);
+    return normalized;
+  }
+
+  clearLocalSession(): void {
+    clearStoredAuth();
   }
 }
