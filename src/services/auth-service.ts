@@ -114,7 +114,10 @@ function persistAuthSession(session: AuthSession, token: AuthTokenBundle): void 
 }
 
 function normalizeRole(raw: string): AuthSession["role"] {
-  return raw.toUpperCase() === "ADMIN" ? "admin" : "customer";
+  const normalized = raw.toUpperCase();
+  if (normalized === "ADMIN") return "admin";
+  if (normalized === "ARTISAN") return "artisan";
+  return "customer";
 }
 
 function normalizeSession(session: AuthSession): AuthSession {

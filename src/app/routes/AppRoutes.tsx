@@ -2,6 +2,7 @@ import { Route, Switch } from "wouter";
 
 import ArtisanDetailPage from "@/features/artisans/ArtisanDetailPage";
 import ArtisansPage from "@/features/artisans/ArtisansPage";
+import ArtisanDashboardPage from "@/features/artisan-dashboard/ArtisanDashboardPage";
 import SignInPage from "@/features/auth/SignInPage";
 import BackofficeArtisansPage from "@/features/backoffice/BackofficeArtisansPage";
 import BackofficeContentPage from "@/features/backoffice/BackofficeContentPage";
@@ -41,6 +42,7 @@ function AppRoutesInner() {
         <Route path="/produit/:id" component={ProductDetailPage} />
         <Route path="/artisans" component={ArtisansPage} />
         <Route path="/artisans/:id" component={ArtisanDetailPage} />
+        <Route path="/artisan/dashboard" component={ArtisanDashboardPage} />
         <Route component={NotFoundPage} />
       </Switch>
     </div>

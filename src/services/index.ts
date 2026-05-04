@@ -1,4 +1,5 @@
 export { ArtisanService } from "./artisan-service";
+export { ArtisanDashboardService } from "./artisan-dashboard-service";
 export { AuthService } from "./auth-service";
 export { BackofficeArtisansService } from "./backoffice-artisans-service";
 export { BackofficeDashboardService } from "./backoffice-dashboard-service";
