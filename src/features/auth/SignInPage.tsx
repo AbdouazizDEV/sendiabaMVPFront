@@ -8,7 +8,9 @@ import { AuthFormPanel } from "./components/AuthFormPanel";
 import { AuthShowcasePanel } from "./components/AuthShowcasePanel";
 
 function resolvePostLoginPath(session: AuthSession): string {
-  return session.role === "admin" ? "/backoffice" : "/";
+  if (session.role === "admin") return "/backoffice";
+  if (session.role === "artisan") return "/artisan/dashboard";
+  return "/";
 }
 
 export default function SignInPage() {

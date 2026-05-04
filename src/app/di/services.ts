@@ -1,6 +1,7 @@
 import { StaticArtisanRepository, StaticProductRepository } from "@/infrastructure/repositories";
 import {
   ArtisanService,
+  ArtisanDashboardService,
   AuthService,
   BackofficeArtisansService,
   BackofficeDashboardService,
@@ -24,6 +25,7 @@ export type AppServices = {
   orderService: OrderService;
   checkoutService: CheckoutService;
   userProfileService: UserProfileService;
+  artisanDashboardService: ArtisanDashboardService;
   backofficeDashboardService: BackofficeDashboardService;
   backofficeArtisansService: BackofficeArtisansService;
   backofficeUsersService: BackofficeUsersService;
@@ -50,6 +52,7 @@ export function getServices(): AppServices {
       orderService,
       checkoutService: new CheckoutService(cartService, productService, orderService),
       userProfileService: new UserProfileService(),
+      artisanDashboardService: new ArtisanDashboardService(),
       backofficeDashboardService: new BackofficeDashboardService(),
       backofficeArtisansService: new BackofficeArtisansService(),
       backofficeUsersService: new BackofficeUsersService(),
