@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useParams } from "wouter";
 
 import { getServices } from "@/app/di/services";
@@ -20,9 +20,88 @@ export default function ProductDetailPage() {
   const { isAuthenticated } = useAuth();
   const { addToCart } = useCart();
 
-  const { productService, artisanService, certificationService } = getServices();
+  const { authService, customerCatalogService, productService, artisanService, certificationService } = getServices();
 
-  const product = productService.getById(params.id ?? "");
+  const [apiProduct, setApiProduct] = useState<{
+    id: string;
+    name: string;
+    artisanId: string;
+    category: "maroquinerie" | "maison" | "decoration" | "coffrets";
+    subcategory: string;
+    price: number;
+    description: string;
+    details: string[];
+    image: string;
+    inStock: boolean;
+    tag?: "Nouveau" | "Pièce Unique" | "Best-Seller" | "Édition Limitée";
+  } | null>(null);
+  const [apiSimilar, setApiSimilar] = useState<
+    Array<{
+      id: string;
+      name: string;
+      artisanId: string;
+      category: "maroquinerie" | "maison" | "decoration" | "coffrets";
+      subcategory: string;
+      price: number;
+      description: string;
+      details: string[];
+      image: string;
+      inStock: boolean;
+      tag?: "Nouveau" | "Pièce Unique" | "Best-Seller" | "Édition Limitée";
+    }>
+  >([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const token = authService.getAccessToken();
+      const id = params.id ?? "";
+      if (!token || !id) return;
+      try {
+        const [detail, similar] = await Promise.all([
+          customerCatalogService.getProductById(token, id),
+          customerCatalogService.getSimilarProducts(token, id, 4),
+        ]);
+        if (cancelled) return;
+        setApiProduct({
+          id: detail.id,
+          name: detail.name,
+          artisanId: detail.artisanId,
+          category: (detail.category as "maroquinerie" | "maison" | "decoration" | "coffrets") ?? "maroquinerie",
+          subcategory: detail.subcategory ?? "",
+          price: detail.price,
+          description: detail.description ?? "",
+          details: detail.details ?? [],
+          image: detail.imageUrl,
+          inStock: detail.inStock,
+          tag: (detail.tag as "Nouveau" | "Pièce Unique" | "Best-Seller" | "Édition Limitée" | null) ?? undefined,
+        });
+        setApiSimilar(
+          similar.map((item) => ({
+            id: item.id,
+            name: item.name,
+            artisanId: item.artisanId,
+            category: (item.category as "maroquinerie" | "maison" | "decoration" | "coffrets") ?? "maroquinerie",
+            subcategory: "",
+            price: item.price,
+            description: "",
+            details: [],
+            image: item.imageUrl,
+            inStock: item.inStock,
+            tag: (item.tag as "Nouveau" | "Pièce Unique" | "Best-Seller" | "Édition Limitée" | null) ?? undefined,
+          })),
+        );
+      } catch {
+        // keep local fallback
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [authService, customerCatalogService, params.id]);
+
+  const product = apiProduct ?? productService.getById(params.id ?? "");
 
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
@@ -54,7 +133,7 @@ export default function ProductDetailPage() {
   }
 
   const artisan = artisanService.getById(product.artisanId);
-  const similarProducts = productService.listSimilar(product, 4);
+  const similarProducts = apiSimilar.length > 0 ? apiSimilar : productService.listSimilar(product, 4);
 
   const artisanNames = Object.fromEntries(
     similarProducts.map((p) => [p.artisanId, artisanService.getById(p.artisanId)?.name]),

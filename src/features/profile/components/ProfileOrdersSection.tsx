@@ -1,10 +1,12 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 
-import type { Order } from "@/domain/types";
-
 type ProfileOrdersSectionProps = {
-  orders: Order[];
+  orders: Array<{
+    id: string;
+    createdAt: string;
+    total: number;
+  }>;
 };
 
 export function ProfileOrdersSection({ orders }: ProfileOrdersSectionProps) {

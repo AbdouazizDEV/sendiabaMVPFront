@@ -8,8 +8,14 @@ import {
   BackofficeUsersService,
   CartService,
   CatalogService,
+  CatalogPublicService,
   CertificationService,
   CheckoutService,
+  ContentPublicService,
+  CustomerCartService,
+  CustomerCatalogService,
+  CustomerOrdersService,
+  HomePublicService,
   OrderService,
   ProductService,
   UserProfileService,
@@ -19,11 +25,17 @@ export type AppServices = {
   artisanService: ArtisanService;
   productService: ProductService;
   catalogService: CatalogService;
+  catalogPublicService: CatalogPublicService;
   certificationService: CertificationService;
   authService: AuthService;
   cartService: CartService;
   orderService: OrderService;
   checkoutService: CheckoutService;
+  customerCartService: CustomerCartService;
+  customerCatalogService: CustomerCatalogService;
+  customerOrdersService: CustomerOrdersService;
+  contentPublicService: ContentPublicService;
+  homePublicService: HomePublicService;
   userProfileService: UserProfileService;
   artisanDashboardService: ArtisanDashboardService;
   backofficeDashboardService: BackofficeDashboardService;
@@ -46,11 +58,17 @@ export function getServices(): AppServices {
       artisanService: new ArtisanService(artisanRepository),
       productService,
       catalogService: new CatalogService(productRepository, artisanRepository),
+      catalogPublicService: new CatalogPublicService(),
       certificationService: new CertificationService(),
       authService: new AuthService(),
       cartService,
       orderService,
       checkoutService: new CheckoutService(cartService, productService, orderService),
+      customerCartService: new CustomerCartService(),
+      customerCatalogService: new CustomerCatalogService(),
+      customerOrdersService: new CustomerOrdersService(),
+      contentPublicService: new ContentPublicService(),
+      homePublicService: new HomePublicService(),
       userProfileService: new UserProfileService(),
       artisanDashboardService: new ArtisanDashboardService(),
       backofficeDashboardService: new BackofficeDashboardService(),

@@ -3,20 +3,30 @@ import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Heart, ChevronRight } from "lucide-react";
 
-import type { Product } from "@/domain/types";
+export type CategoryProductDisplay = {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+  tag?: string | null;
+  inStock?: boolean;
+};
 
 type CategoryProductCardProps = {
-  product: Product;
+  product: CategoryProductDisplay;
   index: number;
   artisanName?: string;
+  productHref?: string;
 };
 
 export function CategoryProductCard({
   product,
   index,
   artisanName,
+  productHref,
 }: CategoryProductCardProps) {
   const [wishlisted, setWishlisted] = useState(false);
+  const linkHref = productHref ?? `/produit/${product.id}`;
   const isLastPiece = product.inStock && index % 3 === 0;
 
   return (
@@ -51,7 +61,7 @@ export function CategoryProductCard({
           <Heart size={15} className={wishlisted ? "fill-primary text-primary" : "text-foreground"} />
         </button>
 
-        <Link href={`/produit/${product.id}`} className="block w-full h-full">
+        <Link href={linkHref} className="block w-full h-full">
           <img
             src={product.image}
             alt={product.name}
@@ -59,7 +69,7 @@ export function CategoryProductCard({
           />
         </Link>
 
-        <Link href={`/produit/${product.id}`}>
+        <Link href={linkHref}>
           <div className="absolute bottom-0 left-0 right-0 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out bg-foreground/95 backdrop-blur-sm px-5 py-4 flex items-center justify-between cursor-pointer">
             <span className="text-xs uppercase tracking-widest text-background font-medium">Voir la fiche</span>
             <ChevronRight size={14} className="text-background" />
@@ -68,13 +78,15 @@ export function CategoryProductCard({
       </div>
 
       <div className="flex-1 flex flex-col">
-        <Link href={`/produit/${product.id}`} className="block">
+        <Link href={linkHref} className="block">
           <h3 className="font-serif text-xl mb-1 text-foreground group-hover:text-primary transition-colors leading-snug">
             {product.name}
           </h3>
         </Link>
         <div className="flex justify-between items-center mt-2">
-          <span className="font-medium text-lg">{product.price} €</span>
+          <span className="font-medium text-lg">
+            {product.price.toLocaleString("fr-FR")} FCFA
+          </span>
         </div>
         <div className="h-5 mt-1 overflow-hidden">
           {artisanName && (

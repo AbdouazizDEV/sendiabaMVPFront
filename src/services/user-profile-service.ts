@@ -8,6 +8,7 @@ type ProfileEnvelope<T> = {
 
 type FavoriteArtisanPayload = {
   favoriteArtisanId: string | null;
+  favoriteArtisanIds?: string[];
 };
 
 type FavoriteProductsPayload = {
@@ -49,7 +50,11 @@ export class UserProfileService {
       method: "GET",
       headers: buildAuthHeaders(accessToken),
     });
-    return assertOk<UserProfile>(response);
+    const payload = await assertOk<UserProfile | ProfileEnvelope<UserProfile>>(response);
+    if (payload && typeof payload === "object" && "data" in payload && payload.data) {
+      return payload.data;
+    }
+    return payload as UserProfile;
   }
 
   async updatePersonalInfo(
@@ -75,6 +80,34 @@ export class UserProfileService {
       body: JSON.stringify({ artisanId: artisanId ?? null }),
     });
     const envelope = await assertOk<ProfileEnvelope<FavoriteArtisanPayload>>(response);
+    return envelope.data;
+  }
+
+  async addFavoriteArtisan(
+    accessToken: string,
+    artisanId: string,
+  ): Promise<{ favoriteArtisanIds: string[] }> {
+    const response = await fetch(`${API_BASE_URL}/v1/profile/me/favorite-artisans`, {
+      method: "POST",
+      headers: buildAuthHeaders(accessToken, true),
+      body: JSON.stringify({ artisanId }),
+    });
+    const envelope = await assertOk<ProfileEnvelope<{ favoriteArtisanIds: string[] }>>(response);
+    return envelope.data;
+  }
+
+  async removeFavoriteArtisan(
+    accessToken: string,
+    artisanId: string,
+  ): Promise<{ favoriteArtisanIds: string[] }> {
+    const response = await fetch(
+      `${API_BASE_URL}/v1/profile/me/favorite-artisans/${encodeURIComponent(artisanId)}`,
+      {
+        method: "DELETE",
+        headers: buildAuthHeaders(accessToken),
+      },
+    );
+    const envelope = await assertOk<ProfileEnvelope<{ favoriteArtisanIds: string[] }>>(response);
     return envelope.data;
   }
 
