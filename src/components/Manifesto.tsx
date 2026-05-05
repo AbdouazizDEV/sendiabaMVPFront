@@ -1,11 +1,22 @@
 import { motion } from "framer-motion";
 import { getManagedText } from "@/content/managed-content";
+import type { HomeManifesto } from "@/services/home-public-service";
 
-export function Manifesto() {
-  const title = getManagedText(
+type ManifestoProps = {
+  data?: HomeManifesto | null;
+};
+
+export function Manifesto({ data }: ManifestoProps) {
+  const title = data?.title ?? getManagedText(
     "home.manifesto.title",
     "Nous ne sommes pas une marketplace. Nous sommes un pont culturel entre les maitres artisans d'Afrique et le monde.",
   );
+  const paragraphs = data?.paragraphs?.length
+    ? data.paragraphs
+    : [
+        "Chaque objet vendu ici porte une histoire humaine traçable. Pas d'usines. Pas de production de masse. Juste le silence d'un atelier à l'aube, la chaleur de la terre cuite brute et le poids du cuir cousu main.",
+        "Nous célébrons le savoir-faire africain avec une exigence absolue. Parce que le luxe véritable n'est pas une question de logo, mais de lignée, de technique et de temps.",
+      ];
   return (
     <section id="manifesto" className="py-32 md:py-48 bg-background relative overflow-hidden">
       {/* Decorative background element */}
@@ -31,14 +42,10 @@ export function Manifesto() {
             className="flex flex-col md:flex-row gap-8 md:gap-16 text-left items-start justify-center"
           >
             <div className="flex-1">
-              <p className="text-muted-foreground leading-relaxed text-lg">
-                Chaque objet vendu ici porte une histoire humaine traçable. Pas d'usines. Pas de production de masse. Juste le silence d'un atelier à l'aube, la chaleur de la terre cuite brute et le poids du cuir cousu main.
-              </p>
+              <p className="text-muted-foreground leading-relaxed text-lg">{paragraphs[0]}</p>
             </div>
             <div className="flex-1">
-              <p className="text-muted-foreground leading-relaxed text-lg">
-                Nous célébrons le savoir-faire africain avec une exigence absolue. Parce que le luxe véritable n'est pas une question de logo, mais de lignée, de technique et de temps.
-              </p>
+              <p className="text-muted-foreground leading-relaxed text-lg">{paragraphs[1] ?? ""}</p>
             </div>
           </motion.div>
         </div>

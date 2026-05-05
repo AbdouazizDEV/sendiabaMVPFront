@@ -5,5 +5,6 @@ export type UserProfile = {
   country: string;
   city: string;
   favoriteArtisanId?: string | null;
+  favoriteArtisanIds?: string[];
   favoriteProductIds: string[];
 };

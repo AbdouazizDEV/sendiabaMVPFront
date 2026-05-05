@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 
 import { getServices } from "@/app/di/services";
@@ -12,6 +12,7 @@ import { getManagedText } from "@/content/managed-content";
 import { CartEmptyState } from "./components/CartEmptyState";
 import { CartItemRow } from "./components/CartItemRow";
 import { CartSummaryCard } from "./components/CartSummaryCard";
+import type { CatalogNewArrivalItem } from "@/services/catalog-public-service";
 
 type CartLine = {
   product: Product;
@@ -22,13 +23,31 @@ export default function CartPage() {
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
   const { items, itemCount, removeFromCart, setQuantity } = useCart();
-  const { productService, catalogService } = getServices();
+  const { productService, catalogPublicService } = getServices();
+  const [newArrivals, setNewArrivals] = useState<CatalogNewArrivalItem[]>([]);
 
   useEffect(() => {
     if (!isAuthenticated) {
       setLocation("/connexion?redirect=/panier");
     }
   }, [isAuthenticated, setLocation]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const items = await catalogPublicService.getNewArrivals(4);
+        if (!cancelled) setNewArrivals(items);
+      } catch {
+        if (!cancelled) setNewArrivals([]);
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, catalogPublicService]);
 
   if (!isAuthenticated) return null;
 
@@ -44,7 +63,6 @@ export default function CartPage() {
     (sum, line) => sum + line.product.price * line.quantity,
     0,
   );
-  const newArrivals = catalogService.sampleNewArrivals(4);
   const pageTitle = getManagedText("cart.page.title", "Vos pieces selectionnees");
   const continueLabel = getManagedText("cart.page.link", "Continuer les achats");
 
@@ -83,7 +101,7 @@ export default function CartPage() {
           </div>
         )}
       </section>
-      <CollectionsNewArrivalsSection products={newArrivals} />
+      <CollectionsNewArrivalsSection items={newArrivals} />
       <Footer />
     </main>
   );

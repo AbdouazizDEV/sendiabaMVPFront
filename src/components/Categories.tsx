@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { getManagedText } from "@/content/managed-content";
+import type { HomeCategories } from "@/services/home-public-service";
 import leatherImg from "../assets/product-leather.png";
 import cushionImg from "../assets/product-cushion.png";
 import sculptureImg from "../assets/product-sculpture.png";
@@ -33,12 +34,26 @@ const categories = [
   },
 ];
 
-export function Categories() {
-  const sectionTitle = getManagedText("home.categories.title", "Les Collections");
-  const sectionSubtitle = getManagedText(
+type CategoriesProps = {
+  data?: HomeCategories | null;
+};
+
+export function Categories({ data }: CategoriesProps) {
+  const sectionTitle = data?.title ?? getManagedText("home.categories.title", "Les Collections");
+  const sectionSubtitle = data?.subtitle ?? getManagedText(
     "home.categories.subtitle",
     "L'excellence de l'artisanat ouest-africain, declinee en quatre univers d'exception.",
   );
+  const resolvedCategories =
+    data?.items && data.items.length > 0
+      ? data.items.map((item) => ({
+          id: item.id,
+          title: item.title,
+          description: item.description,
+          image: item.imageUrl,
+          href: item.href,
+        }))
+      : categories.map((item) => ({ ...item, href: `/collections/${item.id}` }));
   return (
     <section id="categories" className="py-24 bg-white">
       <div className="container mx-auto px-6 md:px-12">
@@ -61,7 +76,7 @@ export function Categories() {
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
-          {categories.map((category, index) => (
+          {resolvedCategories.map((category, index) => (
             <motion.div
               key={category.id}
               initial={{ opacity: 0, y: 40 }}
@@ -70,7 +85,7 @@ export function Categories() {
               transition={{ duration: 0.8, delay: index * 0.1 }}
               className={`group ${index % 2 === 1 ? 'md:mt-24' : ''}`}
             >
-              <Link href={`/collections/${category.id}`}>
+              <Link href={category.href}>
                 <div className="block cursor-pointer">
                   <div className="relative overflow-hidden aspect-[3/4] mb-6 bg-muted">
                     <motion.div

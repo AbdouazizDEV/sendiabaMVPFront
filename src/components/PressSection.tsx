@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { getManagedText } from "@/content/managed-content";
+import type { HomePress } from "@/services/home-public-service";
 
 const mediaLogos = [
   { name: "Jeune Afrique", style: "font-serif italic" },
@@ -14,14 +15,28 @@ const mediaLogos = [
   { name: "Challenges Afrique", style: "font-sans font-semibold tracking-wide" },
 ];
 
-const doubled = [...mediaLogos, ...mediaLogos];
+type PressSectionProps = {
+  data?: HomePress | null;
+};
 
-export function PressSection() {
-  const badge = getManagedText("home.press.badge", "Ils parlent de nous");
-  const subtitle = getManagedText(
+export function PressSection({ data }: PressSectionProps) {
+  const badge = data?.badge ?? getManagedText("home.press.badge", "Ils parlent de nous");
+  const subtitle = data?.subtitle ?? getManagedText(
     "home.press.subtitle",
     "Sendiaba est reconnue par les medias africains et internationaux comme la reference du luxe artisanal de la sous-region.",
   );
+  const pressLogos = data?.logos?.length
+    ? data.logos.map((logo, idx) => ({
+        name: logo.name,
+        style: mediaLogos[idx % mediaLogos.length]?.style ?? "font-serif",
+      }))
+    : mediaLogos;
+  const doubled = [...pressLogos, ...pressLogos];
+  const quoteText =
+    data?.quote?.text ??
+    "Sendiaba réinvente la mise en valeur de l’artisanat africain avec un sens du raffinement rare.";
+  const quoteSource =
+    data?.quote?.source ?? "Jeune Afrique — Hors-série Luxe & Art de Vivre 2025";
   return (
     <section className="py-20 border-t border-b border-foreground/10 overflow-hidden">
       <div className="container mx-auto px-6 md:px-12 mb-12">
@@ -83,10 +98,10 @@ export function PressSection() {
       >
         <blockquote className="max-w-2xl mx-auto">
           <p className="font-serif italic text-xl md:text-2xl text-foreground/60 leading-relaxed">
-            &ldquo;Sendiaba réinvente la mise en valeur de l&rsquo;artisanat africain avec un sens du raffinement rare.&rdquo;
+            &ldquo;{quoteText}&rdquo;
           </p>
           <cite className="block mt-4 text-xs uppercase tracking-widest text-muted-foreground not-italic">
-            Jeune Afrique &mdash; Hors-série Luxe &amp; Art de Vivre 2025
+            {quoteSource}
           </cite>
         </blockquote>
       </motion.div>

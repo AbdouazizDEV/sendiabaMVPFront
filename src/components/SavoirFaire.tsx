@@ -1,10 +1,24 @@
 import { motion } from "framer-motion";
 import { getManagedText } from "@/content/managed-content";
+import type { HomeSavoirFaire } from "@/services/home-public-service";
 import heroImg from "../assets/hero.png";
 
-export function SavoirFaire() {
-  const badge = getManagedText("home.savoirfaire.badge", "L'Art du Temps");
-  const title = getManagedText("home.savoirfaire.title", "Le temps est notre matiere premiere.");
+type SavoirFaireProps = {
+  data?: HomeSavoirFaire | null;
+};
+
+export function SavoirFaire({ data }: SavoirFaireProps) {
+  const badge = data?.badge ?? getManagedText("home.savoirfaire.badge", "L'Art du Temps");
+  const title = data?.title ?? getManagedText("home.savoirfaire.title", "Le temps est notre matiere premiere.");
+  const paragraphs =
+    data?.paragraphs && data.paragraphs.length > 0
+      ? data.paragraphs
+      : [
+          "Dans un monde obsédé par la vitesse, nous avons choisi la lenteur. Un sac Sendiaba n'est pas produit, il naît. Il faut des semaines pour tanner le cuir à la main, des jours pour tisser un mètre de Bogolan, des heures pour broder une finition.",
+          "Ce temps n'est pas perdu, il est investi. C'est lui qui donne à nos objets leur patine, leur âme et leur durabilité. Chaque imperfection est une signature, chaque détail asymétrique est la preuve qu'une main humaine est passée par là.",
+        ];
+  const image = data?.imageUrl ?? heroImg;
+  const cta = data?.cta ?? "Explorer nos techniques";
   return (
     <section className="py-24 md:py-32 bg-background border-t border-border/50">
       <div className="container mx-auto px-6 md:px-12">
@@ -19,7 +33,7 @@ export function SavoirFaire() {
             <div className="relative aspect-[4/5] w-full max-w-md mx-auto lg:mx-0 lg:ml-auto">
               <div className="absolute inset-0 bg-primary/5 translate-x-4 translate-y-4 -z-10" />
               <img 
-                src={heroImg} 
+                src={image} 
                 alt="Le Savoir-Faire" 
                 className="w-full h-full object-cover grayscale-[30%]"
               />
@@ -39,14 +53,14 @@ export function SavoirFaire() {
             </h2>
             <div className="space-y-6 text-muted-foreground text-lg leading-relaxed">
               <p>
-                Dans un monde obsédé par la vitesse, nous avons choisi la lenteur. Un sac Sendiaba n'est pas produit, il naît. Il faut des semaines pour tanner le cuir à la main, des jours pour tisser un mètre de Bogolan, des heures pour broder une finition.
+                {paragraphs[0]}
               </p>
               <p>
-                Ce temps n'est pas perdu, il est investi. C'est lui qui donne à nos objets leur patine, leur âme et leur durabilité. Chaque imperfection est une signature, chaque détail asymétrique est la preuve qu'une main humaine est passée par là.
+                {paragraphs[1] ?? ""}
               </p>
             </div>
             <button className="mt-8 uppercase text-xs tracking-widest text-foreground font-medium hover:text-primary transition-colors flex items-center gap-2 border-b border-foreground hover:border-primary pb-1">
-              Explorer nos techniques
+              {cta}
             </button>
           </motion.div>
         </div>

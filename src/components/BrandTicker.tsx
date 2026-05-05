@@ -21,9 +21,13 @@ const words = [
   "·",
 ];
 
-const doubled = [...words, ...words];
+type BrandTickerProps = {
+  items?: string[];
+};
 
-export function BrandTicker() {
+export function BrandTicker({ items }: BrandTickerProps) {
+  const tickerWords = items && items.length > 0 ? items.flatMap((item) => [item, "·"]) : words;
+  const repeated = [...tickerWords, ...tickerWords];
   return (
     <div className="border-t border-b border-foreground/10 py-3 overflow-hidden bg-background">
       <motion.div
@@ -35,7 +39,7 @@ export function BrandTicker() {
           repeat: Infinity,
         }}
       >
-        {doubled.map((word, i) => (
+        {repeated.map((word, i) => (
           <span
             key={i}
             className={`shrink-0 select-none ${

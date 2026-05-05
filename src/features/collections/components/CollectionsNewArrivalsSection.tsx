@@ -1,14 +1,39 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 
-import type { Product } from "@/domain/types";
+import type { CatalogNewArrivalItem } from "@/services/catalog-public-service";
 
-type CollectionsNewArrivalsSectionProps = {
-  products: Product[];
+export type NewArrivalCardItem = {
+  id: string;
+  name: string;
+  price: number;
+  tag?: string | null;
+  image: string;
+  href: string;
 };
 
-export function CollectionsNewArrivalsSection({ products }: CollectionsNewArrivalsSectionProps) {
-  if (products.length === 0) return null;
+function toCardItems(items: CatalogNewArrivalItem[]): NewArrivalCardItem[] {
+  return items.map((item) => ({
+    id: item.id,
+    name: item.name,
+    price: item.price,
+    tag: item.tag,
+    image: item.imageUrl,
+    href: item.href,
+  }));
+}
+
+type CollectionsNewArrivalsSectionProps = {
+  items: CatalogNewArrivalItem[] | NewArrivalCardItem[];
+};
+
+export function CollectionsNewArrivalsSection({ items }: CollectionsNewArrivalsSectionProps) {
+  const cards: NewArrivalCardItem[] =
+    items.length > 0 && "imageUrl" in items[0]
+      ? toCardItems(items as CatalogNewArrivalItem[])
+      : (items as NewArrivalCardItem[]);
+
+  if (cards.length === 0) return null;
 
   return (
     <section className="py-32 bg-foreground text-background">
@@ -27,7 +52,7 @@ export function CollectionsNewArrivalsSection({ products }: CollectionsNewArriva
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {products.map((product, index) => (
+          {cards.map((product, index) => (
             <motion.div
               key={product.id}
               initial={{ opacity: 0, y: 20 }}
@@ -36,7 +61,7 @@ export function CollectionsNewArrivalsSection({ products }: CollectionsNewArriva
               transition={{ duration: 0.6, delay: index * 0.1 }}
               className="group"
             >
-              <Link href={`/produit/${product.id}`} className="block">
+              <Link href={product.href} className="block">
                 <div className="relative aspect-[3/4] mb-6 overflow-hidden bg-background/5">
                   {product.tag && (
                     <span className="absolute top-4 left-4 z-10 px-3 py-1 bg-primary text-primary-foreground text-[10px] uppercase tracking-widest font-medium">
@@ -50,7 +75,7 @@ export function CollectionsNewArrivalsSection({ products }: CollectionsNewArriva
                   />
                 </div>
                 <h3 className="text-xl font-serif mb-2 group-hover:text-primary transition-colors">{product.name}</h3>
-                <p className="text-background/70">{product.price} €</p>
+                <p className="text-background/70">{product.price.toLocaleString("fr-FR")} FCFA</p>
               </Link>
             </motion.div>
           ))}

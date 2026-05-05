@@ -1,13 +1,20 @@
 import { motion } from "framer-motion";
 import { getManagedText } from "@/content/managed-content";
+import type { CollectionsHeroPayload } from "@/services/catalog-public-service";
 
-export function CollectionsCatalogHero() {
-  const badge = getManagedText("collections.hero.badge", "Le Catalogue Sendiaba");
-  const title = getManagedText("collections.hero.title", "Nos Collections");
-  const quote = getManagedText(
-    "collections.hero.quote",
-    "Le veritable luxe est celui qui porte en lui l'empreinte d'une culture, la noblesse d'une matiere et la passion d'un createur.",
-  );
+type CollectionsCatalogHeroProps = {
+  data?: CollectionsHeroPayload | null;
+};
+
+export function CollectionsCatalogHero({ data }: CollectionsCatalogHeroProps) {
+  const badge = data?.badge ?? getManagedText("collections.hero.badge", "Le Catalogue Sendiaba");
+  const title = data?.title ?? getManagedText("collections.hero.title", "Nos Collections");
+  const quote =
+    data?.quote ??
+    getManagedText(
+      "collections.hero.quote",
+      "Le veritable luxe est celui qui porte en lui l'empreinte d'une culture, la noblesse d'une matiere et la passion d'un createur.",
+    );
   return (
     <section className="relative min-h-[90vh] flex flex-col justify-center items-center bg-primary text-primary-foreground pt-20 px-6 text-center overflow-hidden">
       <div className="absolute inset-0 z-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white to-transparent" />

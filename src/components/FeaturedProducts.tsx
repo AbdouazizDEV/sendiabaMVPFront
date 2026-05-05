@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { ArrowRight } from "lucide-react";
 import { getServices } from "@/app/di/services";
 import { getManagedText } from "@/content/managed-content";
+import type { HomeFeaturedProducts } from "@/services/home-public-service";
 
 const featuredIds = ["p7", "p12"];
 
@@ -17,10 +18,27 @@ function getFeaturedProducts() {
     }));
 }
 
-export function FeaturedProducts() {
-  const featured = getFeaturedProducts();
-  const title = getManagedText("home.featured.title", "Selection Singuliere");
-  const subtitle = getManagedText(
+type FeaturedProductsProps = {
+  data?: HomeFeaturedProducts | null;
+};
+
+export function FeaturedProducts({ data }: FeaturedProductsProps) {
+  const localFeatured = getFeaturedProducts();
+  const featured =
+    data?.items && data.items.length > 0
+      ? data.items.map((item) => ({
+          product: {
+            id: item.id,
+            name: item.name,
+            image: item.imageUrl,
+            price: item.price,
+            tag: item.tag ?? undefined,
+          },
+          artisan: item.artisan ? { name: item.artisan.name } : null,
+        }))
+      : localFeatured;
+  const title = data?.title ?? getManagedText("home.featured.title", "Selection Singuliere");
+  const subtitle = data?.subtitle ?? getManagedText(
     "home.featured.subtitle",
     "Des pieces choisies pour leur aura et leur perfection technique.",
   );

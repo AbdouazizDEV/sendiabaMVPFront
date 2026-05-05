@@ -1,6 +1,11 @@
 import { motion } from "framer-motion";
+import type { HomeTrustItem } from "@/services/home-public-service";
 
-export function TrustBar() {
+type TrustBarProps = {
+  items?: HomeTrustItem[];
+};
+
+export function TrustBar({ items }: TrustBarProps) {
   const pillars = [
     { title: "Artisans Certifiés", desc: "Chaque créateur est vérifié et soutenu" },
     { title: "Livraison Mondiale", desc: "Vers 40+ pays, emballage artisanal" },
@@ -8,6 +13,7 @@ export function TrustBar() {
     { title: "Retours 30 Jours", desc: "Satisfaction ou remboursement" },
   ];
 
+  const data = items && items.length > 0 ? items : pillars;
   return (
     <motion.section
       initial={{ opacity: 0 }}
@@ -18,7 +24,7 @@ export function TrustBar() {
     >
       <div className="container mx-auto px-6 md:px-12">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-4 divide-x-0 md:divide-x divide-background/20">
-          {pillars.map((pillar, idx) => (
+          {data.map((pillar, idx) => (
             <div key={idx} className="px-4 text-center md:text-left flex flex-col items-center md:items-start">
               <h4 className="font-serif text-lg mb-2">{pillar.title}</h4>
               <p className="text-sm text-background/70">{pillar.desc}</p>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, useInView } from "framer-motion";
+import type { HomeStatItem } from "@/services/home-public-service";
 
 function Counter({ target, suffix = "" }: { target: number, suffix?: string }) {
   const [count, setCount] = useState(0);
@@ -32,7 +33,11 @@ function Counter({ target, suffix = "" }: { target: number, suffix?: string }) {
   );
 }
 
-export function StatsSection() {
+type StatsSectionProps = {
+  items?: HomeStatItem[];
+};
+
+export function StatsSection({ items }: StatsSectionProps) {
   const stats = [
     { value: 320, suffix: "+", label: "Artisans partenaires" },
     { value: 12500, suffix: "+", label: "Créations disponibles" },
@@ -40,6 +45,7 @@ export function StatsSection() {
     { value: 98, suffix: "%", label: "Clients satisfaits" },
   ];
 
+  const statsData = items && items.length > 0 ? items : stats;
   return (
     <section className="py-24 md:py-32 bg-background relative overflow-hidden">
       {/* Watermark */}
@@ -49,7 +55,7 @@ export function StatsSection() {
 
       <div className="container mx-auto px-6 md:px-12 relative z-10">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-12 text-center">
-          {stats.map((stat, idx) => (
+          {statsData.map((stat, idx) => (
             <motion.div 
               key={idx}
               initial={{ opacity: 0, y: 20 }}
