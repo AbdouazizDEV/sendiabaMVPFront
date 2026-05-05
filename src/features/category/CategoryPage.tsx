@@ -10,17 +10,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { CATEGORY_PAGE_META, isProductCategory } from "@/content/collection-categories";
+import { CATEGORY_PAGE_META, isProductCategory, type CategoryPageMeta } from "@/content/collection-categories";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
-import { getServices } from "@/app/di/services";
 import { getManagedText } from "@/content/managed-content";
 
 import { CategoryEditorialFooter } from "./components/CategoryEditorialFooter";
 import { CategoryFiltersPanel } from "./components/CategoryFiltersPanel";
 import { CategoryHeroSection } from "./components/CategoryHeroSection";
 import { CategoryProductCard } from "./components/CategoryProductCard";
-import { useCategoryFilters } from "./hooks/useCategoryFilters";
+import { useCategoryCatalog } from "./hooks/useCategoryCatalog";
+import type { SortOption } from "./hooks/useCategoryFilters";
 
 export default function CategoryPage() {
   const params = useParams<{ categoryId?: string }>();
@@ -31,12 +31,12 @@ export default function CategoryPage() {
   }
 
   const categoryId = rawId;
-  const meta = CATEGORY_PAGE_META[categoryId];
-
   const {
+    categoryMeta,
     subcategories,
     categoryArtisans,
     filteredProducts,
+    totalFound,
     selectedSubcats,
     selectedArtisans,
     priceRange,
@@ -49,9 +49,18 @@ export default function CategoryPage() {
     toggleArtisan,
     resetFilters,
     activeFiltersCount,
-  } = useCategoryFilters(categoryId);
+    loadingCatalog,
+    errorMessage,
+  } = useCategoryCatalog(categoryId);
 
-  const { artisanService } = getServices();
+  const displayMeta: CategoryPageMeta = categoryMeta
+    ? {
+        title: categoryMeta.title,
+        description: categoryMeta.description,
+        hero: categoryMeta.heroImageUrl,
+      }
+    : CATEGORY_PAGE_META[categoryId];
+
   const emptyTitle = getManagedText(
     "category.empty.title",
     "Aucune creation ne correspond a vos criteres.",
@@ -64,9 +73,15 @@ export default function CategoryPage() {
   return (
     <main className="min-h-screen w-full bg-background">
       <Navbar />
-      <CategoryHeroSection meta={meta} />
+      <CategoryHeroSection meta={displayMeta} />
 
       <section className="py-16 container mx-auto px-6 md:px-12">
+        {errorMessage && (
+          <p className="mb-6 border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {errorMessage}
+          </p>
+        )}
+
         <div className="flex flex-col lg:flex-row gap-12">
           <aside className="hidden lg:block w-64 flex-shrink-0 sticky top-32 self-start h-[calc(100vh-8rem)] overflow-y-auto pr-6 custom-scrollbar">
             <CategoryFiltersPanel
@@ -87,7 +102,9 @@ export default function CategoryPage() {
 
           <div className="flex-1">
             <div className="flex justify-between items-center mb-8 pb-6 border-b border-border">
-              <p className="text-sm text-muted-foreground">{filteredProducts.length} pièce(s) trouvée(s)</p>
+              <p className="text-sm text-muted-foreground">
+                {loadingCatalog ? "…" : totalFound} pièce(s) trouvée(s)
+              </p>
 
               <div className="flex items-center gap-4">
                 <Sheet>
@@ -121,7 +138,7 @@ export default function CategoryPage() {
                 </Sheet>
 
                 <div className="hidden sm:block">
-                  <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+                  <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
                     <SelectTrigger className="w-[200px] bg-transparent border-foreground/20 rounded-none h-10 text-xs uppercase tracking-widest font-medium focus:ring-primary focus:ring-offset-0">
                       <SelectValue placeholder="Trier par" />
                     </SelectTrigger>
@@ -135,14 +152,24 @@ export default function CategoryPage() {
               </div>
             </div>
 
-            {filteredProducts.length > 0 ? (
+            {loadingCatalog && filteredProducts.length === 0 ? (
+              <p className="text-muted-foreground py-16">Chargement des créations...</p>
+            ) : filteredProducts.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-16">
                 {filteredProducts.map((product, idx) => (
                   <CategoryProductCard
                     key={product.id}
-                    product={product}
+                    product={{
+                      id: product.id,
+                      name: product.name,
+                      price: product.price,
+                      image: product.imageUrl,
+                      tag: product.tag,
+                      inStock: product.inStock,
+                    }}
                     index={idx}
-                    artisanName={artisanService.getById(product.artisanId)?.name}
+                    artisanName={product.artisan?.name}
+                    productHref={product.href}
                   />
                 ))}
               </div>
@@ -159,7 +186,7 @@ export default function CategoryPage() {
         </div>
       </section>
 
-      <CategoryEditorialFooter collectionTitle={meta.title} />
+      <CategoryEditorialFooter collectionTitle={displayMeta.title} />
       <Footer />
     </main>
   );

@@ -14,7 +14,12 @@ import { ProfilePersonalInfoForm } from "./components/ProfilePersonalInfoForm";
 
 export default function ProfilePage() {
   const { session, isAuthenticated } = useAuth();
-  const { authService, orderService, artisanService, productService, userProfileService } =
+  const {
+    authService,
+    customerCatalogService,
+    customerOrdersService,
+    userProfileService,
+  } =
     getServices();
 
   if (!isAuthenticated || !session) {
@@ -37,9 +42,42 @@ export default function ProfilePage() {
   > | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const orders = orderService.listForUser(session.id);
-  const artisans = artisanService.list();
-  const allProducts = productService.list();
+  const [orders, setOrders] = useState<
+    Array<{ id: string; createdAt: string; total: number; status: string }>
+  >([]);
+  const [notifications, setNotifications] = useState<
+    Array<{ id: string; title?: string; message?: string; at?: string; status?: string; read?: boolean }>
+  >([]);
+  const [artisans, setArtisans] = useState<
+    Array<{
+      id: string;
+      name: string;
+      title: string;
+      location: string;
+      heritage: string;
+      quote: string;
+      bio: string;
+      image: string;
+      speciality: string;
+      yearsExperience: number;
+      productsCount: number;
+    }>
+  >([]);
+  const [allProducts, setAllProducts] = useState<
+    Array<{
+      id: string;
+      name: string;
+      artisanId: string;
+      category: "maroquinerie" | "maison" | "decoration" | "coffrets";
+      subcategory: string;
+      price: number;
+      description: string;
+      details: string[];
+      image: string;
+      inStock: boolean;
+      tag?: "Nouveau" | "Pièce Unique" | "Best-Seller" | "Édition Limitée";
+    }>
+  >([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,9 +92,62 @@ export default function ProfilePage() {
       try {
         setIsLoadingProfile(true);
         setErrorMessage(null);
-        const next = await userProfileService.getCurrentProfile(accessToken);
+        const [next, artisansRes, productsRes, ordersRes, notificationsRes] = await Promise.all([
+          userProfileService.getCurrentProfile(accessToken),
+          customerCatalogService.listArtisans(accessToken),
+          customerCatalogService.listProducts(accessToken),
+          customerOrdersService.listOrders(accessToken),
+          customerOrdersService.listNotifications(accessToken),
+        ]);
         if (!cancelled) {
           setProfile(next);
+          setArtisans(
+            artisansRes.map((item) => ({
+              id: item.id,
+              name: item.name,
+              title: item.title,
+              location: item.location,
+              heritage: item.heritage,
+              quote: item.quote,
+              bio: item.bio,
+              image: item.imageUrl,
+              speciality: item.speciality,
+              yearsExperience: item.yearsExperience,
+              productsCount: item.productsCount,
+            })),
+          );
+          setAllProducts(
+            productsRes.map((item) => ({
+              id: item.id,
+              name: item.name,
+              artisanId: "",
+              category: "maroquinerie",
+              subcategory: "",
+              price: item.price,
+              description: "",
+              details: [],
+              image: item.imageUrl,
+              inStock: true,
+            })),
+          );
+          setOrders(
+            ordersRes.map((item) => ({
+              id: item.orderId,
+              createdAt: item.at,
+              total: 0,
+              status: item.status,
+            })),
+          );
+          setNotifications(
+            notificationsRes.map((item) => ({
+              id: item.id,
+              title: item.title,
+              message: item.message,
+              at: item.at ?? item.createdAt,
+              status: item.status,
+              read: item.read,
+            })),
+          );
         }
       } catch (error) {
         if (!cancelled) {
@@ -75,7 +166,7 @@ export default function ProfilePage() {
     return () => {
       cancelled = true;
     };
-  }, [authService, userProfileService]);
+  }, [authService, customerCatalogService, customerOrdersService, userProfileService]);
 
   if (isLoadingProfile) {
     return (
@@ -102,11 +193,11 @@ export default function ProfilePage() {
   }
 
   const favoriteArtisan = profile.favoriteArtisanId
-    ? artisanService.getById(profile.favoriteArtisanId)
+    ? artisans.find((artisan) => artisan.id === profile.favoriteArtisanId)
     : undefined;
 
   const favoriteProducts = profile.favoriteProductIds
-    .map((id) => productService.getById(id))
+    .map((id) => allProducts.find((product) => product.id === id))
     .filter((product): product is NonNullable<typeof product> => Boolean(product));
 
   return (
@@ -178,6 +269,27 @@ export default function ProfilePage() {
         />
 
         <ProfileOrdersSection orders={orders} />
+        <section className="space-y-4 border border-border p-6">
+          <h2 className="font-serif text-3xl">Notifications commandes</h2>
+          {notifications.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Aucune notification pour le moment.</p>
+          ) : (
+            <div className="space-y-3">
+              {notifications.map((notification) => (
+                <article key={notification.id} className="border border-border p-4">
+                  <p className="font-medium">
+                    {notification.title ?? "Mise a jour commande"}
+                    {notification.read === false ? " • Non lue" : ""}
+                  </p>
+                  <p className="text-sm text-muted-foreground">{notification.message ?? notification.status ?? "-"}</p>
+                  {notification.at && (
+                    <p className="mt-2 text-xs text-muted-foreground">{new Date(notification.at).toLocaleString("fr-FR")}</p>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
       </section>
       <Footer />
     </main>

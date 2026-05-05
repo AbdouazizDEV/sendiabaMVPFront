@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { ArrowRight } from "lucide-react";
 import { getManagedText } from "@/content/managed-content";
+import type { HomePromoBanner } from "@/services/home-public-service";
 import giftImg from "../assets/product-gift.png";
 
 function useCountdown(targetDate: Date) {
@@ -31,22 +32,29 @@ function Pad(n: number) {
   return String(n).padStart(2, "0");
 }
 
-export function PromoBanner() {
-  const target = new Date("2026-05-07T00:00:00");
+type PromoBannerProps = {
+  data?: HomePromoBanner | null;
+};
+
+export function PromoBanner({ data }: PromoBannerProps) {
+  const target = new Date(data?.targetDate ?? "2026-05-07T00:00:00Z");
   const { days, hours, minutes, seconds } = useCountdown(target);
-  const badge = getManagedText("home.promo.badge", "Collection Exclusive");
-  const title = getManagedText("home.promo.title", "Tabaski 2026 - Edition Limitee");
-  const subtitle = getManagedText(
+  const badge = data?.badge ?? getManagedText("home.promo.badge", "Collection Exclusive");
+  const title = data?.title ?? getManagedText("home.promo.title", "Tabaski 2026 - Edition Limitee");
+  const subtitle = data?.subtitle ?? getManagedText(
     "home.promo.subtitle",
     "Des coffrets et creations artisanales penses pour celebrer la fete avec raffinement. Chaque piece est numerotee, signee par son artisan, et livree dans un ecrin premium.",
   );
-  const cta = getManagedText("home.promo.cta", "Decouvrir la Collection");
+  const cta = data?.cta ?? getManagedText("home.promo.cta", "Decouvrir la Collection");
+  const href = data?.href ?? "/collections/coffrets";
+  const backgroundImage = data?.backgroundImageUrl ?? giftImg;
+  const remainingPieces = data?.remainingPieces ?? 47;
 
   return (
     <section className="relative w-full overflow-hidden" style={{ minHeight: "520px" }}>
       <div className="absolute inset-0">
         <img
-          src={giftImg}
+          src={backgroundImage}
           alt="Collection Tabaski"
           className="w-full h-full object-cover"
         />
@@ -77,7 +85,7 @@ export function PromoBanner() {
           <p className="text-background/70 text-lg leading-relaxed mb-10 max-w-md">
             {subtitle}
           </p>
-          <Link href="/collections/coffrets">
+          <Link href={href}>
             <motion.button
               whileHover={{ x: 4 }}
               className="inline-flex items-center gap-3 bg-primary text-primary-foreground px-8 py-4 uppercase text-xs tracking-widest font-medium hover:bg-primary/90 transition-colors"
@@ -118,7 +126,7 @@ export function PromoBanner() {
             ))}
           </div>
           <p className="text-xs text-background/40 text-center mt-2">
-            Quantités limitées &mdash; 47 pièces restantes
+            Quantités limitées &mdash; {remainingPieces} pièces restantes
           </p>
         </motion.div>
       </div>

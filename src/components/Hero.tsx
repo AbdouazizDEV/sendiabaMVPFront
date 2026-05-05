@@ -1,9 +1,14 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
 import { getManagedText } from "@/content/managed-content";
+import type { HomeHero } from "@/services/home-public-service";
 import heroImg from "../assets/hero.png";
 
-export function Hero() {
+type HeroProps = {
+  data?: HomeHero | null;
+};
+
+export function Hero({ data }: HeroProps) {
   const ref = useRef(null);
   const { scrollYProgress } = useScroll({
     target: ref,
@@ -16,9 +21,10 @@ export function Hero() {
   const scrollToCollections = () => {
     document.getElementById("categories")?.scrollIntoView({ behavior: "smooth" });
   };
-  const badge = getManagedText("home.hero.badge", "Porte. Pose. Vecu. Fait main.");
-  const title = getManagedText("home.hero.title", "L'ame de l'artisanat africain.");
-  const cta = getManagedText("home.hero.cta", "Decouvrir l'Atelier");
+  const badge = data?.badge ?? getManagedText("home.hero.badge", "Porte. Pose. Vecu. Fait main.");
+  const title = data?.title ?? getManagedText("home.hero.title", "L'ame de l'artisanat africain.");
+  const cta = data?.cta ?? getManagedText("home.hero.cta", "Decouvrir l'Atelier");
+  const backgroundImage = data?.backgroundImageUrl ?? heroImg;
 
   return (
     <section ref={ref} className="relative h-screen w-full overflow-hidden bg-foreground">
@@ -28,7 +34,7 @@ export function Hero() {
       >
         <div className="absolute inset-0 bg-black/40 z-10" />
         <img
-          src={heroImg}
+          src={backgroundImage}
           alt="Sendiaba Atelier at golden hour"
           className="w-full h-full object-cover object-center"
         />

@@ -1,6 +1,5 @@
 import { X } from "lucide-react";
 
-import type { Artisan } from "@/domain/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -8,9 +7,14 @@ import { Switch } from "@/components/ui/switch";
 
 import type { PriceRangeFilter } from "../hooks/useCategoryFilters";
 
+export type ArtisanFilterOption = {
+  id: string;
+  name: string;
+};
+
 type CategoryFiltersPanelProps = {
   subcategories: string[];
-  categoryArtisans: Artisan[];
+  categoryArtisans: ArtisanFilterOption[];
   selectedSubcats: string[];
   selectedArtisans: string[];
   priceRange: PriceRangeFilter;

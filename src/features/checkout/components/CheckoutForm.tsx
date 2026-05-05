@@ -9,7 +9,8 @@ import type { CheckoutDetails, PaymentMethod } from "@/domain/types";
 
 type CheckoutFormProps = {
   initialName: string;
-  onSubmit: (payload: CheckoutDetails) => void;
+  paymentProviders: Array<{ provider_name: string; provider_short_name: string; provider_type: string }>;
+  onSubmit: (payload: CheckoutDetails, paymentOperator?: string) => void;
   isSubmitting: boolean;
 };
 
@@ -20,7 +21,7 @@ const paymentOptions: Array<{ value: PaymentMethod; label: string; hint: string 
   { value: "cash_on_delivery", label: "Paiement a la livraison", hint: "Disponible dans certaines zones" },
 ];
 
-export function CheckoutForm({ initialName, onSubmit, isSubmitting }: CheckoutFormProps) {
+export function CheckoutForm({ initialName, paymentProviders, onSubmit, isSubmitting }: CheckoutFormProps) {
   const [fullName, setFullName] = useState(initialName);
   const [phone, setPhone] = useState("");
   const [country, setCountry] = useState("Senegal");
@@ -30,10 +31,12 @@ export function CheckoutForm({ initialName, onSubmit, isSubmitting }: CheckoutFo
   const [postalCode, setPostalCode] = useState("");
   const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
+  const [paymentOperator, setPaymentOperator] = useState("");
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    onSubmit({
+    onSubmit(
+      {
       fullName,
       phone,
       country,
@@ -43,8 +46,16 @@ export function CheckoutForm({ initialName, onSubmit, isSubmitting }: CheckoutFo
       postalCode,
       notes,
       paymentMethod,
-    });
+      },
+      paymentOperator || undefined,
+    );
   };
+
+  const selectableProviders = paymentProviders.filter((provider) => {
+    if (paymentMethod === "mobile_money") return provider.provider_type === "mobile_money";
+    if (paymentMethod === "card") return provider.provider_type === "card";
+    return false;
+  });
 
   return (
     <motion.form
@@ -106,6 +117,25 @@ export function CheckoutForm({ initialName, onSubmit, isSubmitting }: CheckoutFo
             </button>
           ))}
         </div>
+        {(paymentMethod === "mobile_money" || paymentMethod === "card") && (
+          <div className="space-y-2 pt-2">
+            <Label htmlFor="payment-operator">Operateur / provider</Label>
+            <select
+              id="payment-operator"
+              value={paymentOperator}
+              onChange={(event) => setPaymentOperator(event.target.value)}
+              className="h-11 w-full border border-border bg-background px-3 text-sm outline-none"
+              required
+            >
+              <option value="">Choisir un operateur</option>
+              {selectableProviders.map((provider) => (
+                <option key={provider.provider_short_name} value={provider.provider_short_name}>
+                  {provider.provider_name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="space-y-2">

@@ -2,9 +2,8 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ArrowUpRight, Heart } from "lucide-react";
-import { getServices } from "@/app/di/services";
-import type { Product, ProductCategory } from "@/domain/types";
 import { getManagedText } from "@/content/managed-content";
+import type { HomeShopProduct, HomeShopTabs } from "@/services/home-public-service";
 
 const TABS = [
   { id: "maroquinerie", label: "Maroquinerie & Cuir", accent: "Porté" },
@@ -22,8 +21,8 @@ const TAG_STYLES: Record<string, string> = {
   "Édition Limitée":"bg-accent text-accent-foreground",
 };
 
-function ProductCard({ product, index }: { product: Product; index: number }) {
-  const artisan = getServices().artisanService.getById(product.artisanId);
+function ProductCard({ product, index }: { product: HomeShopProduct; index: number }) {
+  const artisan = product.artisan;
   const [wishlisted, setWishlisted] = useState(false);
 
   return (
@@ -53,7 +52,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
         {/* Image link */}
         <Link href={`/produit/${product.id}`} className="block w-full h-full">
           <motion.img
-            src={product.image}
+            src={product.imageUrl}
             alt={product.name}
             className="w-full h-full object-cover object-center cursor-pointer"
             whileHover={{ scale: 1.06 }}
@@ -97,16 +96,22 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
   );
 }
 
-export function HomepageShop() {
-  const [activeTab, setActiveTab] = useState<CategoryId>("maroquinerie");
-  const badge = getManagedText("home.shop.badge", "La Boutique");
-  const title = getManagedText("home.shop.title", "Chaque piece, une histoire.");
+type HomepageShopProps = {
+  tabsData?: HomeShopTabs | null;
+  productsByCategory?: Record<string, HomeShopProduct[]>;
+};
 
-  const filtered = getServices()
-    .productService.listByCategory(activeTab as ProductCategory)
-    .slice(0, 4);
+export function HomepageShop({ tabsData, productsByCategory }: HomepageShopProps) {
+  const dynamicTabs =
+    tabsData?.tabs?.length && tabsData.tabs.length > 0
+      ? tabsData.tabs
+      : TABS;
+  const [activeTab, setActiveTab] = useState<string>(dynamicTabs[0]?.id ?? "maroquinerie");
+  const badge = tabsData?.badge ?? getManagedText("home.shop.badge", "La Boutique");
+  const title = tabsData?.title ?? getManagedText("home.shop.title", "Chaque piece, une histoire.");
 
-  const currentTab = TABS.find((t) => t.id === activeTab)!;
+  const filtered = productsByCategory?.[activeTab] ?? [];
+  const currentTab = dynamicTabs.find((t) => t.id === activeTab) ?? dynamicTabs[0];
 
   return (
     <section className="py-24 md:py-32 bg-background border-t border-border/40">
@@ -142,7 +147,7 @@ export function HomepageShop() {
 
         {/* Tabs */}
         <div className="flex items-center gap-0 border-b border-border mb-12 overflow-x-auto custom-scrollbar">
-          {TABS.map((tab) => (
+          {dynamicTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -190,9 +195,9 @@ export function HomepageShop() {
           className="mt-14 pt-10 border-t border-border/40 flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
         >
           <p className="text-muted-foreground text-sm max-w-md">
-            <span className="font-serif italic text-foreground text-base">"{currentTab.accent}"</span>
+            <span className="font-serif italic text-foreground text-base">"{currentTab?.accent ?? ""}"</span>
             {" "}— Découvrez l'intégralité de notre collection{" "}
-            <span className="font-medium text-foreground">{currentTab.label.toLowerCase()}</span>, façonnée par nos maîtres artisans.
+            <span className="font-medium text-foreground">{currentTab?.label?.toLowerCase() ?? ""}</span>, façonnée par nos maîtres artisans.
           </p>
           <Link href={`/collections/${activeTab}`}>
             <motion.button
@@ -200,7 +205,7 @@ export function HomepageShop() {
               transition={{ duration: 0.2 }}
               className="inline-flex items-center gap-3 bg-foreground text-background px-8 py-4 text-xs uppercase tracking-widest hover:bg-primary transition-colors duration-300 flex-shrink-0"
             >
-              Explorer {currentTab.label}
+              Explorer {currentTab?.label ?? "la collection"}
               <ArrowRight size={14} />
             </motion.button>
           </Link>

@@ -1,12 +1,21 @@
 import { motion } from "framer-motion";
 import { getManagedText } from "@/content/managed-content";
+import type { HomeNewsletter } from "@/services/home-public-service";
 
-export function Newsletter() {
-  const title = getManagedText("home.newsletter.title", "Rejoignez l'Atelier");
-  const subtitle = getManagedText(
+type NewsletterProps = {
+  data?: HomeNewsletter | null;
+};
+
+export function Newsletter({ data }: NewsletterProps) {
+  const title = data?.title ?? getManagedText("home.newsletter.title", "Rejoignez l'Atelier");
+  const subtitle = data?.subtitle ?? getManagedText(
     "home.newsletter.subtitle",
     "Inscrivez-vous pour decouvrir en avant-premiere nos nouvelles creations, les histoires de nos artisans et nos editions limitees.",
   );
+  const placeholder = data?.placeholder ?? "Votre adresse email";
+  const buttonLabel = data?.buttonLabel ?? "S'inscrire";
+  const consentText =
+    data?.consentText ?? "Nous respectons votre boîte de réception. Désinscription à tout moment.";
   return (
     <section className="py-24 md:py-32 bg-primary text-primary-foreground relative overflow-hidden">
       <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white to-transparent mix-blend-overlay pointer-events-none" />
@@ -25,7 +34,7 @@ export function Newsletter() {
             <form className="flex flex-col sm:flex-row gap-4" onSubmit={(e) => e.preventDefault()}>
               <input 
                 type="email" 
-                placeholder="Votre adresse email" 
+                placeholder={placeholder} 
                 className="flex-1 bg-transparent border-b border-primary-foreground/30 px-4 py-3 text-primary-foreground placeholder:text-primary-foreground/50 focus:outline-none focus:border-primary-foreground transition-colors rounded-none"
                 required
               />
@@ -33,11 +42,11 @@ export function Newsletter() {
                 type="submit"
                 className="bg-primary-foreground text-primary px-8 py-3 uppercase text-xs tracking-widest font-medium hover:bg-background transition-colors"
               >
-                S'inscrire
+                {buttonLabel}
               </button>
             </form>
             <p className="text-xs text-primary-foreground/50 mt-4">
-              Nous respectons votre boîte de réception. Désinscription à tout moment.
+              {consentText}
             </p>
           </motion.div>
         </div>

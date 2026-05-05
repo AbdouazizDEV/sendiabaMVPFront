@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, Menu, ShoppingBag, X } from "lucide-react";
 
+import { getServices } from "@/app/di/services";
 import { Button } from "@/components/ui/button";
 import { useAuth, useCart } from "@/app/state";
 import logoMarron from "@/assets/logomaron.png";
@@ -14,6 +15,8 @@ export function Navbar() {
 
   const { isAuthenticated, logout } = useAuth();
   const { itemCount } = useCart();
+  const { authService, customerOrdersService } = getServices();
+  const [notificationsCount, setNotificationsCount] = useState(0);
 
   const [isScrolled, setIsScrolled] = useState(!isHome);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -31,6 +34,30 @@ export function Navbar() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, [isHome]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setNotificationsCount(0);
+      return;
+    }
+    let cancelled = false;
+    const loadNotifications = async () => {
+      const token = authService.getAccessToken();
+      if (!token) return;
+      try {
+        const items = await customerOrdersService.listNotifications(token);
+        if (cancelled) return;
+        const unread = items.filter((item) => item.read !== true).length;
+        setNotificationsCount(unread);
+      } catch {
+        if (!cancelled) setNotificationsCount(0);
+      }
+    };
+    void loadNotifications();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, authService, customerOrdersService]);
 
   const collections = [
     { name: "Maroquinerie & Cuir", path: "/collections/maroquinerie" },
@@ -117,6 +144,7 @@ export function Navbar() {
               </Link>
               <Link href="/profil" className="hidden md:inline text-xs uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground">
                 Mon profil
+                {notificationsCount > 0 ? ` (${notificationsCount})` : ""}
               </Link>
               <button
                 type="button"
@@ -198,7 +226,7 @@ export function Navbar() {
                     Panier ({itemCount})
                   </Link>
                   <Link href="/profil" onClick={handleMobileNav} className="text-2xl font-serif text-foreground pb-4 border-b border-border/50">
-                    Mon profil
+                    Mon profil {notificationsCount > 0 ? `(${notificationsCount})` : ""}
                   </Link>
                   <button
                     type="button"

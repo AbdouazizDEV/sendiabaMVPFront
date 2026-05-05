@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { getManagedText } from "@/content/managed-content";
+import type { HomeArtisans } from "@/services/home-public-service";
 import artisan1 from "../assets/artisan-1.png";
 import artisan2 from "../assets/artisan-2.png";
 import artisan3 from "../assets/artisan-3.png";
@@ -34,12 +35,28 @@ const artisans = [
   },
 ];
 
-export function Artisans() {
-  const title = getManagedText("home.artisans.title", "Derriere chaque objet, une lignee.");
-  const subtitle = getManagedText(
+type ArtisansProps = {
+  data?: HomeArtisans | null;
+};
+
+export function Artisans({ data }: ArtisansProps) {
+  const title = data?.title ?? getManagedText("home.artisans.title", "Derriere chaque objet, une lignee.");
+  const subtitle = data?.subtitle ?? getManagedText(
     "home.artisans.subtitle",
     "Le vrai luxe reside dans l'humanite de la creation. Rencontrez les maitres artisans dont les noms signent l'authenticite de nos collections.",
   );
+  const artisanItems =
+    data?.items && data.items.length > 0
+      ? data.items.map((item) => ({
+          id: item.id,
+          name: item.name,
+          title: item.title,
+          location: item.location,
+          heritage: item.heritage,
+          image: item.imageUrl,
+          quote: item.quote,
+        }))
+      : artisans;
   return (
     <section id="artisans" className="py-24 md:py-32 bg-foreground text-background">
       <div className="container mx-auto px-6 md:px-12">
@@ -56,7 +73,7 @@ export function Artisans() {
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 md:gap-8">
-          {artisans.map((artisan, index) => (
+          {artisanItems.map((artisan, index) => (
             <motion.div
               key={artisan.id}
               initial={{ opacity: 0, y: 40 }}
