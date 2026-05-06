@@ -7,6 +7,8 @@ import { useAuth } from "@/app/state";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 
+import { AdminBackButton } from "./components/AdminBackButton";
+
 export default function BackofficeHomePage() {
   const { session, isAuthenticated } = useAuth();
   const { authService, backofficeDashboardService } = getServices();
@@ -133,6 +135,7 @@ export default function BackofficeHomePage() {
       <main className="min-h-screen bg-background px-6 pb-16 pt-32 md:px-12">
         <Navbar />
         <div className="mx-auto max-w-7xl">
+          <AdminBackButton />
           <p className="text-muted-foreground">Chargement du dashboard...</p>
         </div>
       </main>
@@ -149,6 +152,7 @@ export default function BackofficeHomePage() {
         className="mx-auto max-w-7xl space-y-8"
       >
         <header className="border border-border bg-muted/20 p-8">
+          <AdminBackButton />
           <p className="text-xs uppercase tracking-[0.3em] text-primary">Back-office</p>
           <h1 className="mt-4 font-serif text-5xl">{overview?.title ?? "Tableau de bord administrateur"}</h1>
           <p className="mt-3 text-muted-foreground">
