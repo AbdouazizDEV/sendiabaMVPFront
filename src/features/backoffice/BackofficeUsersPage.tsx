@@ -12,6 +12,8 @@ import type {
   BackofficeUserStatus,
 } from "@/services/backoffice-users-service";
 
+import { AdminBackButton } from "./components/AdminBackButton";
+
 function statusClasses(status: string): string {
   if (status === "Actif") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-700";
   if (status === "Inactif") return "border-zinc-500/40 bg-zinc-500/10 text-zinc-700";
@@ -147,6 +149,7 @@ export default function BackofficeUsersPage() {
       <main className="min-h-screen bg-background px-6 pb-16 pt-32 md:px-12">
         <Navbar />
         <div className="mx-auto max-w-7xl">
+          <AdminBackButton />
           <p className="text-muted-foreground">Chargement des utilisateurs...</p>
         </div>
       </main>
@@ -163,6 +166,7 @@ export default function BackofficeUsersPage() {
         className="mx-auto max-w-7xl space-y-8"
       >
         <header className="border border-border bg-muted/20 p-8">
+          <AdminBackButton />
           <p className="text-xs uppercase tracking-[0.3em] text-primary">Back-office / Utilisateurs</p>
           <h1 className="mt-4 font-serif text-5xl">Gestion des utilisateurs</h1>
           <p className="mt-3 text-muted-foreground">

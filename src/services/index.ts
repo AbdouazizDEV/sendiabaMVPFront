@@ -4,6 +4,7 @@ export { AuthService } from "./auth-service";
 export { BackofficeArtisansService } from "./backoffice-artisans-service";
 export { BackofficeDashboardService } from "./backoffice-dashboard-service";
 export { BackofficeUsersService } from "./backoffice-users-service";
+export { BackofficeContentService } from "./backoffice-content-service";
 export { CartService } from "./cart-service";
 export { CatalogService } from "./catalog-service";
 export { CatalogPublicService } from "./catalog-public-service";
