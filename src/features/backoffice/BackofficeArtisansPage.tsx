@@ -8,6 +8,8 @@ import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import type { BackofficeArtisan, BackofficeArtisanStatus } from "@/services/backoffice-artisans-service";
 
+import { AdminBackButton } from "./components/AdminBackButton";
+
 function statusClasses(status: BackofficeArtisanStatus): string {
   if (status === "Actif") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-700";
   if (status === "Suspendu") return "border-rose-500/40 bg-rose-500/10 text-rose-700";
@@ -203,6 +205,7 @@ export default function BackofficeArtisansPage() {
         className="mx-auto max-w-7xl space-y-8"
       >
         <header className="border border-border bg-muted/20 p-8">
+          <AdminBackButton />
           <p className="text-xs uppercase tracking-[0.3em] text-primary">Back-office / Artisans</p>
           <h1 className="mt-4 font-serif text-5xl">Gestion des artisans</h1>
           <p className="mt-3 text-muted-foreground">
