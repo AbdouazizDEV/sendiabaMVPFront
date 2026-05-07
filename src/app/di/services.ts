@@ -7,6 +7,8 @@ import {
   BackofficeDashboardService,
   BackofficeUsersService,
   BackofficeContentService,
+  BackofficeCategoriesService,
+  BackofficeHomepageFeaturedArtisansService,
   CartService,
   CatalogService,
   CatalogPublicService,
@@ -43,6 +45,8 @@ export type AppServices = {
   backofficeArtisansService: BackofficeArtisansService;
   backofficeUsersService: BackofficeUsersService;
   backofficeContentService: BackofficeContentService;
+  backofficeCategoriesService: BackofficeCategoriesService;
+  backofficeHomepageFeaturedArtisansService: BackofficeHomepageFeaturedArtisansService;
 };
 
 let instance: AppServices | null = null;
@@ -77,6 +81,8 @@ export function getServices(): AppServices {
       backofficeArtisansService: new BackofficeArtisansService(),
       backofficeUsersService: new BackofficeUsersService(),
       backofficeContentService: new BackofficeContentService(),
+      backofficeCategoriesService: new BackofficeCategoriesService(),
+      backofficeHomepageFeaturedArtisansService: new BackofficeHomepageFeaturedArtisansService(),
     };
   }
   return instance;

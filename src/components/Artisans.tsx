@@ -72,7 +72,7 @@ export function Artisans({ data }: ArtisansProps) {
           <p className="text-background/70 text-lg">{subtitle}</p>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 md:gap-8">
+        <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 md:gap-8 xl:grid-cols-3">
           {artisanItems.map((artisan, index) => (
             <motion.div
               key={artisan.id}
@@ -82,24 +82,35 @@ export function Artisans({ data }: ArtisansProps) {
               transition={{ duration: 0.8, delay: index * 0.2 }}
               className="flex flex-col group"
             >
-              <div className="relative aspect-square mb-8 overflow-hidden rounded-sm">
+              <div className="relative mb-8 aspect-square overflow-hidden rounded-sm">
                 <img
                   src={artisan.image}
                   alt={artisan.name}
-                  className="w-full h-full object-cover object-center filter grayscale group-hover:grayscale-0 transition-all duration-700"
+                  className="h-full w-full object-cover object-center grayscale transition-all duration-700 filter group-hover:grayscale-0"
                 />
-                <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 mix-blend-multiply" />
+                <div className="absolute inset-0 bg-primary/20 opacity-0 mix-blend-multiply transition-opacity duration-500 group-hover:opacity-100" />
               </div>
-              
-              <div className="space-y-4 text-center lg:text-left relative">
-                <div className="absolute -top-12 lg:-left-6 text-6xl text-background/10 font-serif z-0">"</div>
-                <p className="font-serif italic text-xl text-background/90 relative z-10">
-                  {artisan.quote}
-                </p>
-                <div className="pt-4 border-t border-background/20 mt-6">
-                  <h3 className="text-2xl font-serif text-background mb-1">{artisan.name}</h3>
-                  <p className="text-primary font-medium">{artisan.title}</p>
-                  <p className="text-background/60 text-sm mt-2">{artisan.location} • {artisan.heritage}</p>
+
+              <div className="relative space-y-4 text-center lg:text-left">
+                {artisan.quote ? (
+                  <>
+                    <div className="absolute -top-12 z-0 font-serif text-6xl text-background/10 lg:-left-6">
+                      {'"'}
+                    </div>
+                    <p className="relative z-10 font-serif text-xl italic text-background/90">{artisan.quote}</p>
+                  </>
+                ) : (
+                  <p className="relative z-10 text-sm text-background/50">
+                    Artisan mis en avant sur Sendiaba.
+                  </p>
+                )}
+                <div className="mt-6 border-t border-background/20 pt-4">
+                  <h3 className="mb-1 font-serif text-2xl text-background">{artisan.name}</h3>
+                  <p className="font-medium text-primary">{artisan.title}</p>
+                  <p className="mt-2 text-sm text-background/60">
+                    {artisan.location}
+                    {artisan.heritage ? ` · ${artisan.heritage}` : ""}
+                  </p>
                 </div>
               </div>
             </motion.div>

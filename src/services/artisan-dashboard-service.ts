@@ -158,6 +158,18 @@ async function parseJson<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+function normalizeDetailLines(details: UpsertArtisanProductPayload["details"]): string[] {
+  if (Array.isArray(details)) {
+    return details.map((d) => d.trim()).filter(Boolean);
+  }
+  const text = typeof details === "string" ? details.trim() : "";
+  if (!text) return [];
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
 function toMultipartBody(payload: UpsertArtisanProductPayload): FormData {
   const form = new FormData();
   form.append("name", payload.name);
@@ -170,10 +182,11 @@ function toMultipartBody(payload: UpsertArtisanProductPayload): FormData {
     form.append("stockQuantity", String(payload.stockQuantity));
   }
   form.append("tag", payload.tag ?? "");
-  if (Array.isArray(payload.details)) {
-    payload.details.forEach((detail) => form.append("details", detail));
-  } else {
-    form.append("details", payload.details ?? "");
+  // Le backend exige un tableau : en multipart, repeter le champ "details" pour chaque element
+  // (une seule chaine "details" serait valideee comme string, d'ou l'erreur "details must be an array").
+  const detailLines = normalizeDetailLines(payload.details);
+  for (const line of detailLines) {
+    form.append("details", line);
   }
   if (payload.file) {
     form.append("file", payload.file);
