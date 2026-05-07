@@ -961,10 +961,14 @@ export default function ArtisanDashboardPage() {
                 />
               </label>
               <label className="space-y-2 md:col-span-2">
-                <Label htmlFor="productDetails">Details (texte libre)</Label>
+                <Label htmlFor="productDetails">Details du produit</Label>
+                <p className="text-xs text-muted-foreground">
+                  Une ligne = un point de detail (envoye comme liste au serveur).
+                </p>
                 <Textarea
                   id="productDetails"
                   value={form.details}
+                  placeholder={"Exemple :\nCuir pleine fleur\nFabrique a la main\nDelai 10 jours"}
                   onChange={(event) =>
                     setForm((current) => ({ ...current, details: event.target.value }))
                   }

@@ -287,6 +287,16 @@ export default function BackofficeHomePage() {
                 </Button>
               </Link>
             ))}
+            <Link href="/backoffice/categories">
+              <Button variant="outline" className="rounded-none uppercase tracking-[0.2em]">
+                Categories
+              </Button>
+            </Link>
+            <Link href="/backoffice/homepage-artisans">
+              <Button variant="outline" className="rounded-none uppercase tracking-[0.2em]">
+                Artisans accueil
+              </Button>
+            </Link>
           </div>
         </section>
       </motion.div>

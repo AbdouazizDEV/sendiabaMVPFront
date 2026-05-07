@@ -5,6 +5,8 @@ import ArtisansPage from "@/features/artisans/ArtisansPage";
 import ArtisanDashboardPage from "@/features/artisan-dashboard/ArtisanDashboardPage";
 import SignInPage from "@/features/auth/SignInPage";
 import BackofficeArtisansPage from "@/features/backoffice/BackofficeArtisansPage";
+import BackofficeCategoriesPage from "@/features/backoffice/BackofficeCategoriesPage";
+import BackofficeHomepageArtisansPage from "@/features/backoffice/BackofficeHomepageArtisansPage";
 import BackofficeContentPage from "@/features/backoffice/BackofficeContentPage";
 import BackofficeHomePage from "@/features/backoffice/BackofficeHomePage";
 import BackofficeUsersPage from "@/features/backoffice/BackofficeUsersPage";
@@ -31,6 +33,8 @@ function AppRoutesInner() {
         <Route path="/connexion" component={SignInPage} />
         <Route path="/backoffice" component={BackofficeHomePage} />
         <Route path="/backoffice/artisans" component={BackofficeArtisansPage} />
+        <Route path="/backoffice/categories" component={BackofficeCategoriesPage} />
+        <Route path="/backoffice/homepage-artisans" component={BackofficeHomepageArtisansPage} />
         <Route path="/backoffice/contenu" component={BackofficeContentPage} />
         <Route path="/backoffice/utilisateurs" component={BackofficeUsersPage} />
         <Route path="/profil" component={ProfilePage} />
